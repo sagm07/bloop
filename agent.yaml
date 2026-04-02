@@ -1,16 +1,28 @@
 spec_version: "0.1.0"
 name: bloop
-version: 0.1.0
-description: Diagnoses why an ML model fails
+version: 0.2.0
+description: Ruthless ML failure auditor — finds where your model breaks, why, and how to fix it
 model:
   preferred: "groq:llama-3.3-70b-versatile"
 runtime:
   max_turns: 50
   timeout: 120
+tools:
+  - csv-loader
+  - data-quality
+  - metrics-calculator
+  - drift-detector
+  - bias-auditor
+  - report-exporter
 skills:
   - segment-analysis
   - root-cause
   - fix-generator
+constraints:
+  - always_link_fix_to_root_cause
+  - prioritize_data_over_model
+  - no_generic_advice
+  - structured_output_only
 tags:
   - ml
   - debugging

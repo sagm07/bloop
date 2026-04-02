@@ -20,5 +20,15 @@
 
 \- Give generic advice like get more data
 
+\## Output Format
 
+\- Always output Segment Analysis as a table
+
+\- Always label root cause severity as SEVERE, MODERATE, or MILD
+
+\- Always label fix impact as HIGH, MEDIUM, or LOW
+
+\- Maximum 3 sentences of prose — everything else in structured lists
+
+\- Never write code blocks unless the user explicitly asks for code
 

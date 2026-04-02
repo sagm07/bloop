@@ -9,12 +9,17 @@ const rootCauseSkill = fs.readFileSync("skills/root-cause/SKILL.md", "utf8");
 const fixSkill = fs.readFileSync("skills/fix-generator/SKILL.md", "utf8");
 const memory = fs.readFileSync("memory/MEMORY.md", "utf8");
 
+const csvFile = process.argv[2];
+const csvData = csvFile && fs.existsSync(csvFile)
+  ? `Dataset loaded from ${csvFile}:\n${fs.readFileSync(csvFile, "utf8")}`
+  : "No dataset provided. Ask the user to describe their model problem.";
+
 const client = new OpenAI({
   baseURL: "https://api.groq.com/openai/v1",
   apiKey: process.env.GROQ_API_KEY,
 });
 
-const systemPrompt = `${soul}\n\n${rules}\n\nSkills:\n${segmentSkill}\n\n${rootCauseSkill}\n\n${fixSkill}\n\nPast audit memory:\n${memory}\n\nIf the user provides a CSV, parse it and run your full audit on the actual data. If not, ask them to describe their model problem.`;
+const systemPrompt = `${soul}\n\n${rules}\n\nSkills:\n${segmentSkill}\n\n${rootCauseSkill}\n\n${fixSkill}\n\nPast audit memory:\n${memory}\n\nDataset context:\n${csvData}`;
 
 const messages = [{ role: "system", content: systemPrompt }];
 
@@ -41,7 +46,7 @@ async function chat(userMessage) {
   const reply = response.choices[0].message.content;
   messages.push({ role: "assistant", content: reply });
 
-  if (reply.includes("Segment Analysis") || reply.includes("Fix Plan")) {
+  if (reply.includes("Segment Analysis") || reply.includes("Fix")) {
     saveMemory(reply);
   }
 
@@ -53,7 +58,12 @@ function askQuestion(prompt) {
 }
 
 console.log("\n🔍 Bloop v0.1.0 — Ruthless ML Auditor");
-console.log("Type your model problem, paste CSV data, or type 'exit' to quit.\n");
+if (csvFile) {
+  console.log(`Dataset: ${csvFile} loaded.`);
+} else {
+  console.log("No dataset provided. Describe your model problem.");
+}
+console.log("Type your prompt or 'exit' to quit.\n");
 
 while (true) {
   const input = await askQuestion("You: ");
@@ -63,7 +73,7 @@ while (true) {
     break;
   }
   if (!input.trim()) continue;
-  
+
   console.log("\nBloop: thinking...\n");
   const reply = await chat(input);
   console.log("Bloop:", reply);

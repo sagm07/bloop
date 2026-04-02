@@ -1,0 +1,17 @@
+name: drift-detector
+description: Detect distribution shift between two datasets or between feature distributions using PSI and KS statistics
+input_schema:
+  properties:
+    reference:
+      type: array
+      description: Reference dataset (training distribution)
+    current:
+      type: array
+      description: Current dataset (test or production distribution)
+    columns:
+      type: array
+      description: Columns to check for drift
+  required: [reference, current]
+implementation:
+  script: scripts/drift-detector.js
+  runtime: node

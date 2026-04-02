@@ -1,0 +1,14 @@
+name: report-exporter
+description: Export the full audit report as a markdown file with timestamp
+input_schema:
+  properties:
+    filename:
+      type: string
+      description: Output filename
+    content:
+      type: string
+      description: Full audit report content
+  required: [filename, content]
+implementation:
+  script: scripts/report-exporter.js
+  runtime: node

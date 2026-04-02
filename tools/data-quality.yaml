@@ -1,0 +1,14 @@
+name: data-quality
+description: Detect data quality issues — duplicates, missing values, class imbalance, schema problems
+input_schema:
+  properties:
+    data:
+      type: array
+      description: Array of row objects from the CSV
+    target_column:
+      type: string
+      description: The column being predicted
+  required: [data, target_column]
+implementation:
+  script: scripts/data-quality.js
+  runtime: node

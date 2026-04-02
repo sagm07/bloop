@@ -1,0 +1,17 @@
+name: metrics-calculator
+description: Calculate F1, precision, recall, accuracy per class and per segment from actual vs predicted columns
+input_schema:
+  properties:
+    actual:
+      type: array
+      description: Ground truth labels
+    predicted:
+      type: array
+      description: Model predictions
+    segments:
+      type: object
+      description: Optional dictionary of segment column values for sliced analysis
+  required: [actual, predicted]
+implementation:
+  script: scripts/metrics-calculator.js
+  runtime: node

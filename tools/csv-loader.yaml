@@ -1,0 +1,14 @@
+name: csv-loader
+description: Load and parse any CSV file, detect columns, identify actual vs predicted, flag missing values and duplicates
+input_schema:
+  properties:
+    filepath:
+      type: string
+      description: Path to the CSV file
+    target_column:
+      type: string
+      description: The column being predicted (optional, Bloop will detect if not provided)
+  required: [filepath]
+implementation:
+  script: scripts/csv-loader.js
+  runtime: node
