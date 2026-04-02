@@ -1,0 +1,17 @@
+spec_version: "0.1.0"
+name: bloop
+version: 0.1.0
+description: Diagnoses why an ML model fails
+model:
+  preferred: "groq:llama-3.3-70b-versatile"
+runtime:
+  max_turns: 50
+  timeout: 120
+skills:
+  - segment-analysis
+  - root-cause
+  - fix-generator
+tags:
+  - ml
+  - debugging
+  - hackathon
