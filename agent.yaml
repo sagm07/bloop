@@ -1,15 +1,25 @@
-﻿spec_version: "0.1.0"
+spec_version: "0.1.0"
 name: bloop
-version: 0.1.0
+version: 1.0.0
 description: "ML failure auditor. Finds what 87% accuracy hides."
 model:
   preferred: groq:llama-3.3-70b-versatile
 runtime:
-  timeout: 30000
+  timeout: 60000
+  entrypoint: server.mjs
+  port: 3000
+deploy:
+  provider: clawless
+  env:
+    - GROQ_API_KEY
 skills:
+  - segment-analysis
+  - root-cause
+  - fix-generator
   - audit-model
   - write-report
 tags:
   - ml
   - bias-detection
   - hackathon
+  - gitagent

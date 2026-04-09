@@ -1,7 +1,20 @@
 {
+  "name": "bloop",
+  "version": "1.0.0",
+  "description": "ML failure auditor. Finds what 87% accuracy hides.",
   "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "run": "node run.mjs",
+    "audit": "node run.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "gitclaw": "..."
+    "gitclaw": "*",
+    "openai": "^4.0.0"
   }
 }
-
