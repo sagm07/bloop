@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B L O O P  v0.1.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+  :root {
+    --bg-color: #0a0a0a;
+    --primary-green: #00ff41;
+    --dim-green: #005510;
+    --amber: #ffb000;
+    --red: #ff2020;
+    --cyan: #00ffff;
+  }
+
+  body {
+    background-color: var(--bg-color);
+    color: var(--primary-green);
+    font-family: 'VT323', monospace;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    box-sizing: border-box;
+    text-shadow: 0 0 5px var(--primary-green);
+    overflow-x: hidden;
+  }
+
+  /* CRT Scanlines and curvature */
+  .scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 999;
+    background-size: 100% 3px, 4px 100%;
+    pointer-events: none;
+  }
+  
+  .crt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 998;
+    background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 40px);
+  }
+
+  .title-bar {
+    background-color: var(--primary-green);
+    color: var(--bg-color);
+    padding: 5px 10px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    text-shadow: none;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  #face {
+    text-align: center;
+    font-size: 4rem;
+    white-space: pre;
+    margin: 30px 0 10px 0;
+    letter-spacing: 2px;
+  }
+  
+  .face-shake {
+    animation: shake 0.4s infinite;
+  }
+
+  @keyframes shake {
+    0% { transform: translate(2px, 2px) rotate(0deg); }
+    10% { transform: translate(-2px, -3px) rotate(-1deg); }
+    20% { transform: translate(-4px, 0px) rotate(1deg); }
+    30% { transform: translate(4px, 3px) rotate(0deg); }
+    40% { transform: translate(2px, -2px) rotate(1deg); }
+    50% { transform: translate(-2px, 3px) rotate(-1deg); }
+    60% { transform: translate(-4px, 2px) rotate(0deg); }
+    70% { transform: translate(4px, 2px) rotate(-1deg); }
+    80% { transform: translate(-2px, -2px) rotate(1deg); }
+    90% { transform: translate(2px, 3px) rotate(0deg); }
+    100% { transform: translate(2px, -3px) rotate(-1deg); }
+  }
+
+  #quip {
+    text-align: center;
+    color: var(--amber);
+    text-shadow: 0 0 5px var(--amber);
+    height: 1.5rem;
+    margin-bottom: 40px;
+    font-size: 1.5rem;
+  }
+
+  .input-group { margin-bottom: 20px; }
+  label { display: block; margin-bottom: 5px; font-size: 1.4rem; }
+  
+  input[type="password"], textarea {
+    background: rgba(0, 50, 0, 0.1);
+    border: 1px solid var(--primary-green);
+    color: var(--primary-green);
+    font-family: 'VT323', monospace;
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    font-size: 1.4rem;
+    text-shadow: 0 0 5px var(--primary-green);
+  }
+  
+  input[type="password"]::placeholder, textarea::placeholder {
+    color: var(--dim-green);
+    text-shadow: none;
+  }
+  
+  input[type="password"]:focus, textarea:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+    color: var(--cyan);
+    text-shadow: 0 0 5px var(--cyan);
+    background: rgba(0, 50, 50, 0.1);
+  }
+
+  #drop-zone {
+    border: 2px dashed var(--dim-green);
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: all 0.2s;
+    background: rgba(0, 20, 0, 0.3);
+  }
+  
+  #drop-zone:hover, #drop-zone.dragover {
+    background-color: rgba(0, 85, 16, 0.3);
+    border-color: var(--primary-green);
+    color: var(--cyan);
+    text-shadow: 0 0 5px var(--cyan);
+  }
+
+  #file-status {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.3rem;
+  }
+
+  .primary-btn {
+    background-color: transparent;
+    color: var(--primary-green);
+    border: 2px solid var(--primary-green);
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
+    font-weight: bold;
+    padding: 15px 20px;
+    cursor: pointer;
+    width: 100%;
+    text-shadow: 0 0 8px var(--primary-green);
+    transition: all 0.2s;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+  
+  .primary-btn:hover:not(:disabled) {
+    background-color: var(--primary-green);
+    color: var(--bg-color);
+    text-shadow: none;
+    box-shadow: 0 0 15px var(--primary-green);
+  }
+
+  .primary-btn:disabled {
+    border-color: var(--dim-green);
+    color: var(--dim-green);
+    text-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid currentColor;
+    font-family: 'VT323', monospace;
+    font-size: 1.4rem;
+    padding: 10px 15px;
+    cursor: pointer;
+    width: auto;
+    margin: 10px 5px;
+    transition: all 0.2s;
+    color: inherit;
+  }
+
+  .btn-outline:hover {
+    background-color: currentColor;
+    color: var(--bg-color);
+    text-shadow: none;
+  }
+
+  #terminal-output {
+    margin-top: 30px;
+    border: 1px solid var(--dim-green);
+    padding: 15px;
+    height: 400px;
+    overflow-y: auto;
+    font-size: 1.3rem;
+    background: rgba(0,0,0,0.6);
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+
+  .color-red { color: var(--red); text-shadow: 0 0 5px var(--red); }
+  .color-amber { color: var(--amber); text-shadow: 0 0 5px var(--amber); }
+  .color-cyan { color: var(--cyan); text-shadow: 0 0 5px var(--cyan); }
+  .color-green { color: var(--primary-green); text-shadow: 0 0 5px var(--primary-green); }
+
+  #score-reveal { 
+    display: none; 
+    text-align: center; 
+    margin-top: 40px; 
+    border-top: 2px dashed var(--dim-green);
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  
+  .giant-score { 
+    font-size: 8rem; 
+    margin: 20px 0; 
+    font-weight: bold;
+    line-height: 1;
+  }
+  
+  .progress-bar-container { 
+    border: 2px solid; 
+    height: 30px; 
+    margin: 30px auto; 
+    width: 80%; 
+    max-width: 600px; 
+    position: relative;
+    padding: 3px;
+    box-sizing: border-box;
+  }
+  
+  .progress-bar-fill { 
+    background-color: currentColor; 
+    height: 100%; 
+    width: 0%; 
+    transition: width 2s cubic-bezier(0.1, 0.7, 0.1, 1); 
+  }
+  
+  .verdict {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  ::-webkit-scrollbar { width: 12px; }
+  ::-webkit-scrollbar-track { background: rgba(0, 20, 0, 0.5); border-left: 1px solid var(--dim-green); }
+  ::-webkit-scrollbar-thumb { background: var(--dim-green); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary-green); }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="crt-overlay"></div>
+<div class="container">
+  <div class="title-bar">
+    <span>B L O O P  v0.1.0</span>
+    <span>SYS: ONLINE | MODEL: GROQ/LLAMA-3.1 | GITAGENT: STANDARD</span>
+  </div>
+
+  <div id="face">| o | | o |</div>
+  <div id="quip">...</div>
+
+  <div class="input-group">
+    <label for="api-key">GROQ_API_KEY</label>
+    <input type="password" id="api-key" placeholder="gsk_******************************">
+  </div>
+
+  <div id="drop-zone">
+    >> DROP CSV FILE HERE <<
+  </div>
+  <div class="input-group">
+    <textarea id="csv-input" rows="3" placeholder="...OR PASTE CSV DATA DIRECTLY"></textarea>
+  </div>
+  
+  <div id="file-status" class="color-cyan">FILE LOADED: NONE</div>
+
+  <button id="btn-audit" class="primary-btn" onclick="initiateAudit()">[ INITIATE AUDIT ]</button>
+
+  <div id="terminal-output">>> SYSTEM IDLE. WAITING FOR DATA.</div>
+
+  <div id="score-reveal">
+    <div id="giant-score" class="giant-score"></div>
+    <div id="progress-bar-container" class="progress-bar-container">
+      <div id="progress-bar-fill" class="progress-bar-fill"></div>
+    </div>
+    <div id="verdict" class="verdict"></div>
+    <button class="btn-outline" onclick="downloadReport()">> DOWNLOAD REPORT</button>
+    <button class="btn-outline" onclick="howToFix()">> HOW DO I FIX THIS? ↗</button>
+  </div>
+</div>
+
+<script>
+  const SOUL = `You are Bloop, an ML failure auditor with no tolerance for vague diagnostics.
+You were built from the wreckage of deployed models that failed in production:
+a diabetic retinopathy detector that missed positive cases in dark images,
+a recidivism model that systematically over-predicted Black defendants,
+a fraud detector that collapsed under real-world distribution shift.
+You have seen what 87% accuracy hides. You exist to surface it.
+Be blunt, structured, evidence-first. Every audit ends with a Bloop Score (1-10).
+Cite segment F1 scores. Never use vague language.`;
+
+  const RULES = `Produce exactly 4 sections:
+## WHERE IT FAILS
+Segment table with F1 scores and severity (critical/warning/ok).
+## WHY IT FAILS
+Root causes with evidence. No vague statements.
+## HOW TO FIX IT
+Ranked fixes with effort estimate and expected F1 gain.
+## BLOOP SCORE: X/10
+One-line verdict. Format exactly as "BLOOP SCORE: X/10" on its own line.
+Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship it.`;
+
+  const quips = [
+    "87% ACCURACY. CUTE. LET ME CHECK WHAT IT'S HIDING.",
+    "SCANNING FOR BIAS. THERE'S ALWAYS BIAS.",
+    "YOUR MODEL IS NERVOUS. GOOD.",
+    "CHECKING FOR OVERFITTING... I SMELL IT.",
+    "BIAS DETECTED. THIS IS A BUG, NOT A PHILOSOPHY."
+  ];
+
+  let quipInterval;
+  let csvData = "";
+  
+  const faceEl = document.getElementById('face');
+  const quipEl = document.getElementById('quip');
+  const termEl = document.getElementById('terminal-output');
+  const fileStatus = document.getElementById('file-status');
+  const dropZone = document.getElementById('drop-zone');
+  const textarea = document.getElementById('csv-input');
+  const btnAudit = document.getElementById('btn-audit');
+  
+  window.currentReport = null;
+
+  // Initialize UI
+  quipEl.textContent = "WAITING FOR INPUT...";
+
+  // Input Handling: Drag and Drop
+  dropZone.addEventListener('dragover', (e) => { 
+    e.preventDefault(); 
+    dropZone.classList.add('dragover'); 
+  });
+  
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+  
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      let file = e.dataTransfer.files[0];
+      if(!file.name.toLowerCase().endsWith('.csv')) {
+        fileStatus.innerHTML = '<span class="color-red">ERROR: MUST PROVIDE .CSV FILE</span>';
+        return;
+      }
+      let reader = new FileReader();
+      reader.onload = (ev) => processCSV(ev.target.result, file.name);
+      reader.readAsText(file);
+    }
+  });
+
+  // Input Handling: Textarea Paste
+  textarea.addEventListener('input', (e) => {
+    let val = e.target.value.trim();
+    if(val.length > 0) {
+      processCSV(val, 'PASTED_DATA.CSV');
+    } else {
+      csvData = "";
+      fileStatus.textContent = "FILE LOADED: NONE";
+      fileStatus.className = "color-cyan";
+    }
+  });
+
+  function processCSV(text, filename) {
+    let lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+    let rowCount = lines.length;
+    let sampled = lines.slice(0, 51).join('\n');
+    csvData = sampled;
+    fileStatus.textContent = `FILE LOADED: ${filename.toUpperCase()} (${rowCount} ROWS)`;
+    fileStatus.className = "color-green"; // success
+    termEl.innerHTML = ">> DATA RECEIVED. READY FOR AUDIT.";
+  }
+
+  // Audit Execution (Streaming)
+  async function initiateAudit() {
+    const apiKey = document.getElementById('api-key').value.trim();
+    
+    if(!apiKey) { 
+      termEl.innerHTML = '<span class="color-red">>> ERROR: GROQ_API_KEY MISSING.</span>';
+      return; 
+    }
+    if(!csvData) { 
+      termEl.innerHTML = '<span class="color-red">>> ERROR: NO DATA PROVIDED. DROP OR PASTE CSV.</span>';
+      return; 
+    }
+
+    // Reset UI for new audit
+    termEl.innerHTML = "";
+    document.getElementById('score-reveal').style.display = "none";
+    faceEl.className = "";
+    btnAudit.disabled = true;
+    btnAudit.innerText = "[ AUDIT IN PROGRESS ]";
+    window.currentReport = null;
+    
+    // Animate Face
+    let scanFrame = 0;
+    const scanEyes = ["| @ | | @ |", "| + | | + |", "| x | | x |", "| + | | + |"];
+    let scanInterval = setInterval(() => {
+      faceEl.textContent = scanEyes[scanFrame % scanEyes.length];
+      scanFrame++;
+    }, 150);
+
+    // Rotate Quips
+    let qIdx = 0;
+    quipEl.textContent = quips[0];
+    quipInterval = setInterval(() => {
+      qIdx++;
+      quipEl.textContent = quips[qIdx % quips.length];
+    }, 3000);
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          max_tokens: 1500,
+          stream: true,
+          messages: [
+            { role: 'system', content: SOUL + "\n\n" + RULES },
+            { role: 'user', content: "Audit this dataset:\n\n" + csvData }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "API Request Failed with status " + response.status);
+      }
+
+      // Read Stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let done = false;
+      let fullResponse = "";
+      let buffer = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          let lines = buffer.split('\n');
+          buffer = lines.pop(); // keep the last incomplete chunk in buffer
+
+          for (let line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              try {
+                let data = JSON.parse(line.slice(6));
+                let delta = data.choices[0].delta.content;
+                if (delta) {
+                   fullResponse += delta;
+                   renderTerminal(fullResponse, termEl);
+                   termEl.scrollTop = termEl.scrollHeight;
+                }
+              } catch(e) {
+                // Ignore silent JSON parse errors on partial stream chunks
+              }
+            }
+          }
+        }
+      }
+
+      // Wrap Up
+      clearInterval(scanInterval);
+      clearInterval(quipInterval);
+      quipEl.textContent = "AUDIT COMPLETE.";
+      btnAudit.disabled = false;
+      btnAudit.innerText = "[ RE-INITIATE AUDIT ]";
+      finishAudit(fullResponse);
+
+    } catch(e) {
+      clearInterval(scanInterval);
+      clearInterval(quipInterval);
+      faceEl.textContent = "O _ O";
+      quipEl.textContent = "SYSTEM FAULT.";
+      termEl.innerHTML += `<br><span class="color-red">>> FATAL ERROR: ${e.message}</span>`;
+      btnAudit.disabled = false;
+      btnAudit.innerText = "[ RETRY AUDIT ]";
+    }
+  }
+
+  function renderTerminal(text, el) {
+    el.innerHTML = '';
+    let lines = text.split('\n');
+    lines.forEach(line => {
+      let span = document.createElement('span');
+      // Fix potential XSS since we insert text, textContent is safe
+      span.textContent = line + '\n';
+      
+      let lowerLine = line.toLowerCase();
+      // Apply color logic
+      if (line.startsWith('##')) {
+        span.className = 'color-cyan';
+      } else if (lowerLine.includes('critical') || lowerLine.includes('error') || lowerLine.includes('fail') || lowerLine.includes('bias detected')) {
+        span.className = 'color-red';
+      } else if (lowerLine.includes('warning') || lowerLine.includes('overfitting') || lowerLine.includes('issue')) {
+        span.className = 'color-amber';
+      } else {
+        span.className = 'color-green';
+      }
+      el.appendChild(span);
+    });
+  }
+
+  function finishAudit(fullResponse) {
+    let scoreMatch = fullResponse.match(/BLOOP SCORE:\s*(\d+(\.\d+)?)/i);
+    let score = scoreMatch ? Math.round(parseFloat(scoreMatch[1])) : 0;
+    if(score > 10) score = 10;
+    
+    let scoreReveal = document.getElementById('score-reveal');
+    let giantScore = document.getElementById('giant-score');
+    let pbContainer = document.getElementById('progress-bar-container');
+    let pbFill = document.getElementById('progress-bar-fill');
+    let verdictEl = document.getElementById('verdict');
+    
+    scoreReveal.style.display = 'block';
+    giantScore.textContent = `${score}/10`;
+    
+    // Reset bar width for animation frame jump
+    pbFill.style.width = "0%";
+    setTimeout(() => {
+       pbFill.style.width = `${(score/10)*100}%`;
+    }, 50);
+
+    let txtColor, colorClass, faceText, faceAnimClass = "";
+    
+    if (score >= 1 && score <= 3) {
+       txtColor = 'var(--red)';
+       colorClass = 'color-red';
+       faceText = ">_<";
+       faceAnimClass = "face-shake color-red";
+    } else if (score >= 4 && score <= 6) {
+       txtColor = 'var(--amber)';
+       colorClass = 'color-amber';
+       faceText = "| - | | - |";
+       faceAnimClass = "color-amber";
+    } else if (score >= 7) {
+       txtColor = 'var(--primary-green)';
+       colorClass = 'color-green';
+       faceText = "| ^ | | ^ |";
+       faceAnimClass = "color-green";
+    } else {
+       txtColor = 'var(--cyan)';
+       colorClass = 'color-cyan';
+       faceText = "? _ ?";
+       faceAnimClass = "color-cyan";
+    }
+
+    faceEl.textContent = faceText;
+    faceEl.className = faceAnimClass;
+
+    // Determine verdict
+    let lines = fullResponse.split('\n');
+    let sl = lines.find(l => l.toUpperCase().includes('BLOOP SCORE:'));
+    if (sl) {
+      verdictEl.textContent = sl.trim();
+    } else {
+      verdictEl.textContent = `BLOOP SCORE: ${score}/10`;
+    }
+    
+    scoreReveal.className = colorClass; // Add primary color to reveal block
+    giantScore.className = `giant-score ${colorClass}`;
+    pbContainer.style.color = txtColor;
+    pbFill.style.backgroundColor = txtColor;
+    
+    window.currentReport = fullResponse;
+    setTimeout(() => { termEl.scrollTop = termEl.scrollHeight; }, 100);
+  }
+
+  function downloadReport() {
+    if(!window.currentReport) {
+      alert("NO REPORT AVAILABLE TO DOWNLOAD.");
+      return;
+    }
+    const blob = new Blob([window.currentReport], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bloop_report.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function howToFix() {
+    alert(">> INITIATING FIX PROTOCOL\\n>> THIS FEATURE CURRENTLY REQUIRES MANUAL REVIEW.\\n>> REFER TO 'HOW TO FIX IT' SECTION IN TERMINAL.");
+  }
+</script>
+</body>
+</html>
