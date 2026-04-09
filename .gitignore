@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+reports/
+*.log
+.DS_Store
+Thumbs.db
+.gitagent/audit.jsonl
+memory/runtime/context.md

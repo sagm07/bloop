@@ -493,6 +493,60 @@
   ::-webkit-scrollbar-track { background: transparent; border-left: 1px solid var(--border-color); }
   ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 6px; }
   ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+  /* API Key Connect Panel */
+  #connect-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #0d1117;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+  }
+  #connect-panel.connected {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 8px rgba(57,211,83,0.15);
+  }
+  #api-key {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 4px 0;
+    font-size: 1.2rem;
+  }
+  #api-key:focus { box-shadow: none; border: none; }
+  #btn-connect {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-family: 'VT323', monospace;
+    font-size: 1.2rem;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  #btn-connect:hover { border-color: var(--neon-green); color: var(--neon-green); }
+  #btn-connect.connected { border-color: var(--neon-green); color: var(--neon-green); }
+  #connect-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #333;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  #connect-status-dot.on { background: var(--neon-green); box-shadow: var(--neon-green-glow); }
+
+  /* Score color variants */
+  .score-critical { color: var(--neon-red) !important; text-shadow: var(--neon-red-glow) !important; }
+  .score-warn     { color: var(--neon-amber) !important; text-shadow: var(--neon-amber-glow) !important; }
+  .score-good     { color: var(--neon-green) !important; text-shadow: var(--neon-green-glow) !important; }
+  .bar-critical   { background-color: var(--neon-red) !important; box-shadow: var(--neon-red-glow) !important; }
+  .bar-warn       { background-color: var(--neon-amber) !important; box-shadow: var(--neon-amber-glow) !important; }
 </style>
 </head>
 <body>
@@ -511,7 +565,7 @@
       
       <div class="ui-header">
         <span class="title">BLOOP v1.0 GB</span>
-        <span class="status-line">SYS: ON  MDL: GROQ</span>
+        <span class="status-line" id="status-bar">SYS: ON &nbsp; MDL: &mdash;</span>
       </div>
 
       <div class="main-content">
@@ -521,9 +575,10 @@
         </div>
 
         <div class="input-panel">
-          <div>
-            <label for="api-key">API KEY</label>
-            <input type="password" id="api-key" placeholder="gsk_****************">
+          <div id="connect-panel">
+            <div id="connect-status-dot"></div>
+            <input type="password" id="api-key" placeholder="GROQ API KEY  gsk_***...">
+            <button id="btn-connect" onclick="toggleConnect()">CONNECT</button>
           </div>
 
           <div id="drop-zone">>> DROP CSV HERE <<</div>
@@ -821,6 +876,132 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
   }
 
   function howToFix() { alert(">> INITIATING FIX PROTOCOL\\n>> AUTO-FIX REQUIRES PREMIUM AGENT (CARTRIDGE EXPANSION)."); }
+</script>
+
+<script>
+  // ── CONNECT toggle ────────────────────────────────────────────────────────
+  let apiConnected = false;
+  let _realApiKey = '';
+  const statusBar = document.getElementById('status-bar');
+  const connectDot = document.getElementById('connect-status-dot');
+  const connectPanel = document.getElementById('connect-panel');
+  const connectBtn = document.getElementById('btn-connect');
+
+  function setStatus(text, color) {
+    statusBar.textContent = text;
+    statusBar.style.color = color || 'var(--neon-cyan)';
+    statusBar.style.textShadow = color ? '0 0 8px ' + color + '88' : 'var(--neon-cyan-glow)';
+  }
+
+  function toggleConnect() {
+    const key = document.getElementById('api-key').value.trim();
+    if (!apiConnected) {
+      if (!key) { setStatus('ERR: KEY REQUIRED', 'var(--neon-red)'); return; }
+      _realApiKey = key;
+      apiConnected = true;
+      connectDot.classList.add('on');
+      connectPanel.classList.add('connected');
+      connectBtn.textContent = 'DISCONNECT';
+      connectBtn.classList.add('connected');
+      const keyInput = document.getElementById('api-key');
+      keyInput.type = 'text';
+      keyInput.value = key.slice(0, 8) + '••••••••••••••••';
+      keyInput.disabled = true;
+      setStatus('SYS: ON  MDL: GROQ  ● LIVE', 'var(--neon-green)');
+      quipEl.textContent = 'CONNECTED. DROP A CSV TO BEGIN.';
+    } else {
+      _realApiKey = '';
+      apiConnected = false;
+      connectDot.classList.remove('on');
+      connectPanel.classList.remove('connected');
+      connectBtn.textContent = 'CONNECT';
+      connectBtn.classList.remove('connected');
+      const keyInput = document.getElementById('api-key');
+      keyInput.type = 'password';
+      keyInput.value = '';
+      keyInput.disabled = false;
+      setStatus('SYS: ON  MDL: —', 'var(--neon-cyan)');
+      quipEl.textContent = 'WAITING FOR INPUT...';
+    }
+  }
+
+  // Patch initiateAudit to use stored key and require connect first
+  const _origInitiateAudit = window.initiateAudit || initiateAudit;
+  document.getElementById('btn-audit').onclick = async function() {
+    if (!apiConnected) {
+      termEl.innerHTML = '<span class="color-red">>> ERROR: NOT CONNECTED. ENTER KEY AND PRESS CONNECT.</span>';
+      return;
+    }
+    // Temporarily restore real key for the fetch inside initiateAudit
+    const keyEl = document.getElementById('api-key');
+    const maskedVal = keyEl.value;
+    keyEl.disabled = false;
+    keyEl.value = _realApiKey;
+    await initiateAudit();
+    keyEl.value = maskedVal;
+    keyEl.disabled = true;
+  };
+
+  // ── FIX IT — generates and downloads a Python fix script ──────────────────
+  // Override the original howToFix
+  window.howToFix = async function() {
+    if (!window.currentReport) {
+      faceImg.src = 'assets/cat_worried.png';
+      faceImg.className = 'face-warn';
+      termEl.innerHTML = '<span class="color-amber">>> NO AUDIT TO FIX. RUN AUDIT FIRST.</span>';
+      return;
+    }
+    if (!apiConnected) {
+      termEl.innerHTML = '<span class="color-red">>> ERROR: NOT CONNECTED.</span>';
+      return;
+    }
+    termEl.innerHTML += '\n\n<span class="color-cyan">>> GENERATING FIX SCRIPT...</span>\n';
+    setStatus('SYS: ON  MDL: GROQ  ⟳ FIXING', 'var(--neon-amber)');
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _realApiKey },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 800,
+          messages: [
+            { role: 'system', content: 'Output only runnable Python code. No explanation. Include sklearn imports.' },
+            { role: 'user', content: 'Write a fix script for this audit:\n\n' + window.currentReport }
+          ]
+        })
+      });
+      const data = await res.json();
+      const code = data.choices[0].message.content;
+      const blob = new Blob([code], { type: 'text/x-python' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'bloop_fix.py';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      termEl.innerHTML += '<span class="color-green">>> FIX SCRIPT DOWNLOADED: bloop_fix.py</span>';
+      setStatus('SYS: ON  MDL: GROQ  ● LIVE', 'var(--neon-green)');
+    } catch(e) {
+      termEl.innerHTML += `<span class="color-red">>> FIX SCRIPT ERROR: ${e.message}</span>`;
+      setStatus('SYS: ON  MDL: GROQ  ● LIVE', 'var(--neon-green)');
+    }
+  };
+
+  // ── Score bar color update ─────────────────────────────────────────────────
+  // Patch finishAudit to color the score and bar dynamically
+  const _origFinishAudit = window.finishAudit;
+  if (_origFinishAudit) {
+    window.finishAudit = function(fullResponse) {
+      _origFinishAudit(fullResponse);
+      const scoreMatch = fullResponse.match(/BLOOP SCORE:\s*(\d+)/i);
+      const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
+      const giantScore = document.getElementById('giant-score');
+      const pbFill = document.getElementById('progress-bar-fill');
+      giantScore.className = 'giant-score ' + (score <= 3 ? 'score-critical' : score <= 6 ? 'score-warn' : 'score-good');
+      pbFill.className = 'progress-bar-fill ' + (score <= 3 ? 'bar-critical' : score <= 6 ? 'bar-warn' : '');
+      const label = score <= 3 ? 'DO NOT SHIP' : score <= 6 ? 'NEEDS WORK' : score <= 9 ? 'SHIP WITH FIXES' : 'SHIP IT';
+      setStatus(`SYS: ON  MDL: GROQ  SCORE: ${score}/10 — ${label}`, score <= 3 ? 'var(--neon-red)' : score <= 6 ? 'var(--neon-amber)' : 'var(--neon-green)');
+    };
+  }
+
 </script>
 </body>
 </html>
