@@ -3,320 +3,522 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>B L O O P  v0.1.0</title>
+<title>B L O O P  v0.3.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
   :root {
-    --bg-color: #0a0a0a;
-    --primary-green: #00ff41;
-    --dim-green: #005510;
-    --amber: #ffb000;
-    --red: #ff2020;
-    --cyan: #00ffff;
+    --plastic-bg: #dce3b5; /* Gameboy body pale green/yellow */
+    --screen-bg: #8ea378; /* Screen off color */
+    --screen-on-bg: #a1b888; /* Screen on base color */
+    --text-color: #26331e; /* Classic dark olive pixel color */
+    
+    --btn-pink: #d13d8a;
+    --btn-gray: #4b4b4b;
+    
+    /* Terminal output colors, adjusted to look retro but readable on screen-on-bg */
+    --text-red: #8f0e0e;
+    --text-amber: #944e00;
+    --text-cyan: #074759;
+    --text-green: #115711;
   }
 
   body {
-    background-color: var(--bg-color);
-    color: var(--primary-green);
+    background-color: var(--plastic-bg);
+    color: var(--text-color);
     font-family: 'VT323', monospace;
     margin: 0;
     padding: 0;
-    height: 100vh;
+    min-height: 100vh;
     box-sizing: border-box;
-    text-shadow: 0 0 5px var(--primary-green);
+    display: flex;
+    flex-direction: column;
     overflow-x: hidden;
   }
 
-  /* CRT Scanlines and curvature */
-  .scanlines {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    z-index: 999;
-    background-size: 100% 3px, 4px 100%;
-    pointer-events: none;
-  }
-  
-  .crt-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 998;
-    background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.6) 100%);
-    pointer-events: none;
+  .landscape-header {
+    height: 35vh;
+    background-image: url('assets/scenery.png');
+    background-size: cover;
+    background-position: center bottom;
+    border-bottom: 5px solid #26331e;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 2;
   }
 
-  .container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    position: relative;
-    z-index: 1;
+  .gameboy-body {
+    flex: 1;
+    padding: 30px 20px 50px 20px;
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - 40px);
+    align-items: center;
+    position: relative;
   }
 
-  .title-bar {
-    background-color: var(--primary-green);
-    color: var(--bg-color);
-    padding: 5px 10px;
+  /* Screen Outer Bezel */
+  .screen-bezel {
+    background-color: #5c6652;
+    padding: 25px 35px 50px 35px;
+    border-radius: 15px 15px 40px 15px; /* angled bottom right corner */
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.6), 0 8px 0px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 700px;
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .power-light-container {
+    position: absolute;
+    top: 50px; left: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .power-light {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background-color: #511414;
+    transition: all 0.3s;
+  }
+  
+  .power-light.on {
+    background-color: #ff3333;
+    box-shadow: 0 0 8px #ff3333;
+  }
+
+  .power-label {
+    font-size: 0.8rem; color: #a4b295; font-weight: bold;
+  }
+
+  /* Actual Screen */
+  .screen-container {
+    background-color: var(--screen-on-bg);
+    border: 4px solid var(--text-color);
+    border-radius: 5px;
+    box-shadow: inset 0 0 30px rgba(46,62,35,0.3);
+    min-height: 420px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grid overlay for LCD effect */
+  .pixel-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(rgba(38, 51, 30, 0.04) 50%, rgba(0,0,0,0) 50%), 
+                linear-gradient(90deg, rgba(38, 51, 30, 0.04) 50%, rgba(0,0,0,0) 50%);
+    background-size: 3px 3px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* UI inside screen */
+  .ui-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 20px;
-    text-shadow: none;
-    font-size: 1.2rem;
-    font-weight: bold;
-    text-transform: uppercase;
+    align-items: center;
+    border-bottom: 2px solid var(--text-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 11;
   }
 
-  #face {
-    text-align: center;
-    font-size: 4rem;
-    white-space: pre;
-    margin: 30px 0 10px 0;
-    letter-spacing: 2px;
+  .title { font-size: 2rem; font-weight: bold; text-transform: uppercase; }
+  .status-line { font-size: 1.2rem; font-weight: bold; }
+
+  .main-content {
+    position: relative;
+    z-index: 11;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .character-section {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 20px;
+  }
+
+  #cat-face {
+    width: 130px;
+    height: 130px;
+    object-fit: cover;
+    border: 3px solid var(--text-color);
+    background-color: #fff;
+    image-rendering: auto;
+    border-radius: 10px;
+  }
+
+  .face-shake {
+    animation: shake 0.2s infinite;
   }
   
-  .face-shake {
-    animation: shake 0.4s infinite;
+  .face-scanning {
+    animation: flash-border 0.5s infinite alternate;
   }
-
+  
   @keyframes shake {
     0% { transform: translate(2px, 2px) rotate(0deg); }
-    10% { transform: translate(-2px, -3px) rotate(-1deg); }
-    20% { transform: translate(-4px, 0px) rotate(1deg); }
-    30% { transform: translate(4px, 3px) rotate(0deg); }
-    40% { transform: translate(2px, -2px) rotate(1deg); }
-    50% { transform: translate(-2px, 3px) rotate(-1deg); }
-    60% { transform: translate(-4px, 2px) rotate(0deg); }
-    70% { transform: translate(4px, 2px) rotate(-1deg); }
-    80% { transform: translate(-2px, -2px) rotate(1deg); }
-    90% { transform: translate(2px, 3px) rotate(0deg); }
-    100% { transform: translate(2px, -3px) rotate(-1deg); }
+    25% { transform: translate(-2px, 0px) rotate(-1deg); }
+    50% { transform: translate(1px, -2px) rotate(1deg); }
+    75% { transform: translate(-1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, 1px) rotate(-1deg); }
   }
 
-  #quip {
-    text-align: center;
-    color: var(--amber);
-    text-shadow: 0 0 5px var(--amber);
-    height: 1.5rem;
-    margin-bottom: 40px;
+  @keyframes flash-border {
+    from { border-color: var(--text-color); }
+    to { border-color: var(--text-green); }
+  }
+
+  .quip-box {
+    flex: 1;
     font-size: 1.5rem;
+    font-weight: bold;
+    min-height: 4rem;
+    display: flex;
+    align-items: center;
   }
 
-  .input-group { margin-bottom: 20px; }
-  label { display: block; margin-bottom: 5px; font-size: 1.4rem; }
-  
-  input[type="password"], textarea {
-    background: rgba(0, 50, 0, 0.1);
-    border: 1px solid var(--primary-green);
-    color: var(--primary-green);
-    font-family: 'VT323', monospace;
-    padding: 12px;
-    width: 100%;
-    box-sizing: border-box;
-    outline: none;
+  .input-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  label {
     font-size: 1.4rem;
-    text-shadow: 0 0 5px var(--primary-green);
+    font-weight: bold;
+    margin-bottom: -5px;
   }
-  
-  input[type="password"]::placeholder, textarea::placeholder {
-    color: var(--dim-green);
-    text-shadow: none;
+
+  input, textarea {
+    background: transparent;
+    border: 2px solid var(--text-color);
+    color: var(--text-color);
+    font-family: 'VT323', monospace;
+    padding: 8px 10px;
+    font-size: 1.4rem;
+    outline: none;
+    resize: none;
   }
-  
-  input[type="password"]:focus, textarea:focus {
-    border-color: var(--cyan);
-    box-shadow: 0 0 10px var(--cyan);
-    color: var(--cyan);
-    text-shadow: 0 0 5px var(--cyan);
-    background: rgba(0, 50, 50, 0.1);
+
+  input::placeholder, textarea::placeholder {
+    color: #4a5c3d;
+  }
+
+  input:focus, textarea:focus {
+    background: rgba(255,255,255,0.2);
   }
 
   #drop-zone {
-    border: 2px dashed var(--dim-green);
-    padding: 30px;
+    border: 2px dashed var(--text-color);
+    padding: 15px;
     text-align: center;
-    margin-bottom: 10px;
     cursor: pointer;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+    font-weight: bold;
     transition: all 0.2s;
-    background: rgba(0, 20, 0, 0.3);
   }
   
   #drop-zone:hover, #drop-zone.dragover {
-    background-color: rgba(0, 85, 16, 0.3);
-    border-color: var(--primary-green);
-    color: var(--cyan);
-    text-shadow: 0 0 5px var(--cyan);
+    background: rgba(255,255,255,0.3);
   }
 
   #file-status {
     text-align: center;
-    margin-bottom: 30px;
-    font-size: 1.3rem;
-  }
-
-  .primary-btn {
-    background-color: transparent;
-    color: var(--primary-green);
-    border: 2px solid var(--primary-green);
-    font-family: 'VT323', monospace;
-    font-size: 2rem;
     font-weight: bold;
-    padding: 15px 20px;
-    cursor: pointer;
-    width: 100%;
-    text-shadow: 0 0 8px var(--primary-green);
-    transition: all 0.2s;
-    margin-bottom: 10px;
-    letter-spacing: 2px;
-  }
-  
-  .primary-btn:hover:not(:disabled) {
-    background-color: var(--primary-green);
-    color: var(--bg-color);
-    text-shadow: none;
-    box-shadow: 0 0 15px var(--primary-green);
-  }
-
-  .primary-btn:disabled {
-    border-color: var(--dim-green);
-    color: var(--dim-green);
-    text-shadow: none;
-    cursor: not-allowed;
-  }
-
-  .btn-outline {
-    background-color: transparent;
-    border: 1px solid currentColor;
-    font-family: 'VT323', monospace;
-    font-size: 1.4rem;
-    padding: 10px 15px;
-    cursor: pointer;
-    width: auto;
-    margin: 10px 5px;
-    transition: all 0.2s;
-    color: inherit;
-  }
-
-  .btn-outline:hover {
-    background-color: currentColor;
-    color: var(--bg-color);
-    text-shadow: none;
+    font-size: 1.3rem;
   }
 
   #terminal-output {
-    margin-top: 30px;
-    border: 1px solid var(--dim-green);
+    flex: 1;
+    border: 2px solid var(--text-color);
     padding: 15px;
-    height: 400px;
+    min-height: 220px;
+    max-height: 250px;
     overflow-y: auto;
     font-size: 1.3rem;
-    background: rgba(0,0,0,0.6);
-    line-height: 1.4;
+    background: rgba(255,255,255,0.1);
     white-space: pre-wrap;
+    line-height: 1.3;
   }
 
-  .color-red { color: var(--red); text-shadow: 0 0 5px var(--red); }
-  .color-amber { color: var(--amber); text-shadow: 0 0 5px var(--amber); }
-  .color-cyan { color: var(--cyan); text-shadow: 0 0 5px var(--cyan); }
-  .color-green { color: var(--primary-green); text-shadow: 0 0 5px var(--primary-green); }
+  .color-red { color: var(--text-red); font-weight: bold; }
+  .color-amber { color: var(--text-amber); font-weight: bold; }
+  .color-cyan { color: var(--text-cyan); font-weight: bold; }
+  .color-green { color: var(--text-green); font-weight: bold; }
 
+  /* Buttons & Controls Area */
+  .controls-area {
+    width: 100%;
+    max-width: 650px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0 10px;
+  }
+
+  .d-pad-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-top: 10px;
+  }
+  
+  .d-pad {
+    position: absolute;
+    background: var(--btn-gray);
+    border: 2px solid #2a2a2a;
+    border-radius: 4px;
+    box-shadow: -2px 3px 0 rgba(0,0,0,0.3);
+  }
+  .d-vertical { top: 0; bottom: 0; left: 33%; right: 33%; }
+  .d-horizontal { left: 0; right: 0; top: 33%; bottom: 33%; }
+  .d-pad-center {
+    position: absolute;
+    top: 33%; left: 33%; bottom: 33%; right: 33%;
+    background: var(--btn-gray);
+    border: none;
+    z-index: 2;
+  }
+  .d-pad-center::after {
+    content: ''; position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 15px; height: 15px;
+    border-radius: 50%; background: #3a3a3a;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 25px;
+    transform: rotate(-15deg);
+    margin-top: 30px;
+    margin-right: 10px;
+  }
+
+  .btn-wrapper { position: relative; }
+
+  .btn-gameboy {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background-color: var(--btn-pink);
+    border: 3px solid #2a2a2a;
+    box-shadow: -2px 5px 0 #2a2a2a, inset 3px 3px 6px rgba(255,255,255,0.4), inset -3px -3px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.1s;
+    outline: none;
+  }
+  
+  .btn-gameboy:active {
+    transform: translate(-1px, 3px);
+    box-shadow: -1px 2px 0 #2a2a2a, inset 3px 3px 6px rgba(255,255,255,0.4), inset -3px -3px 6px rgba(0,0,0,0.3);
+  }
+  
+  .btn-gameboy:disabled {
+    filter: brightness(0.6) grayscale(0.5);
+    cursor: not-allowed;
+  }
+
+  .btn-label-inner {
+    position: absolute;
+    bottom: -35px;
+    right: -10px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #65715a;
+  }
+
+  .btn-desc-label {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #26331e;
+    font-size: 1.4rem;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .pill-buttons {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    width: 100%;
+    margin-top: 40px;
+  }
+
+  .btn-pill-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: rotate(-15deg);
+  }
+
+  .btn-pill {
+    width: 65px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: var(--btn-gray);
+    border: 2px solid #2a2a2a;
+    box-shadow: -2px 3px 0 #2a2a2a;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.1s;
+  }
+
+  .btn-pill:active {
+    transform: translate(-1px, 2px);
+    box-shadow: -1px 1px 0 #2a2a2a;
+  }
+
+  .pill-label {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #65715a;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  /* Score Module elements */
   #score-reveal { 
     display: none; 
     text-align: center; 
-    margin-top: 40px; 
-    border-top: 2px dashed var(--dim-green);
-    padding-top: 40px;
-    padding-bottom: 40px;
+    margin-top: 20px; 
+    border-top: 2px dashed var(--text-color);
+    padding-top: 20px;
+    padding-bottom: 10px;
   }
   
   .giant-score { 
-    font-size: 8rem; 
-    margin: 20px 0; 
+    font-size: 4.5rem; 
+    margin: 10px 0; 
     font-weight: bold;
     line-height: 1;
   }
   
   .progress-bar-container { 
-    border: 2px solid; 
-    height: 30px; 
-    margin: 30px auto; 
-    width: 80%; 
-    max-width: 600px; 
-    position: relative;
-    padding: 3px;
+    border: 3px solid var(--text-color); 
+    background: rgba(255,255,255,0.2);
+    height: 25px; 
+    margin: 15px auto; 
+    width: 90%; 
     box-sizing: border-box;
+    padding: 2px;
   }
   
   .progress-bar-fill { 
-    background-color: currentColor; 
+    background-color: var(--text-color); 
     height: 100%; 
     width: 0%; 
-    transition: width 2s cubic-bezier(0.1, 0.7, 0.1, 1); 
-  }
-  
-  .verdict {
-    font-size: 2rem;
-    margin-bottom: 30px;
-    font-weight: bold;
-    letter-spacing: 1px;
+    transition: width 2.5s cubic-bezier(0.1, 0.7, 0.1, 1); 
   }
 
+  .verdict {
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  
+  /* Make simple inner scrollbars gameboyish */
   ::-webkit-scrollbar { width: 12px; }
-  ::-webkit-scrollbar-track { background: rgba(0, 20, 0, 0.5); border-left: 1px solid var(--dim-green); }
-  ::-webkit-scrollbar-thumb { background: var(--dim-green); }
-  ::-webkit-scrollbar-thumb:hover { background: var(--primary-green); }
+  ::-webkit-scrollbar-track { background: transparent; border-left: 2px solid var(--text-color); }
+  ::-webkit-scrollbar-thumb { background: var(--text-color); }
 </style>
 </head>
 <body>
-<div class="scanlines"></div>
-<div class="crt-overlay"></div>
-<div class="container">
-  <div class="title-bar">
-    <span>B L O O P  v0.1.0</span>
-    <span>SYS: ONLINE | MODEL: GROQ/LLAMA-3.1 | GITAGENT: STANDARD</span>
-  </div>
 
-  <div id="face">| o | | o |</div>
-  <div id="quip">...</div>
-
-  <div class="input-group">
-    <label for="api-key">GROQ_API_KEY</label>
-    <input type="password" id="api-key" placeholder="gsk_******************************">
-  </div>
-
-  <div id="drop-zone">
-    >> DROP CSV FILE HERE <<
-  </div>
-  <div class="input-group">
-    <textarea id="csv-input" rows="3" placeholder="...OR PASTE CSV DATA DIRECTLY"></textarea>
-  </div>
+<div class="landscape-header"></div>
+<div class="gameboy-body">
   
-  <div id="file-status" class="color-cyan">FILE LOADED: NONE</div>
-
-  <button id="btn-audit" class="primary-btn" onclick="initiateAudit()">[ INITIATE AUDIT ]</button>
-
-  <div id="terminal-output">>> SYSTEM IDLE. WAITING FOR DATA.</div>
-
-  <div id="score-reveal">
-    <div id="giant-score" class="giant-score"></div>
-    <div id="progress-bar-container" class="progress-bar-container">
-      <div id="progress-bar-fill" class="progress-bar-fill"></div>
+  <div class="screen-bezel">
+    <div class="power-light-container">
+      <div id="power-led" class="power-light on"></div>
+      <div class="power-label">BATTERY</div>
     </div>
-    <div id="verdict" class="verdict"></div>
-    <button class="btn-outline" onclick="downloadReport()">> DOWNLOAD REPORT</button>
-    <button class="btn-outline" onclick="howToFix()">> HOW DO I FIX THIS? ↗</button>
+    
+    <div class="screen-container">
+      <div class="pixel-overlay"></div>
+      
+      <div class="ui-header">
+        <span class="title">BLOOP v1.0 GB</span>
+        <span class="status-line">SYS: ON  MDL: GROQ</span>
+      </div>
+
+      <div class="main-content">
+        <div class="character-section">
+          <img id="cat-face" src="assets/cat_idle.png" alt="Bloop">
+          <div class="quip-box" id="quip">WAITING FOR DATA...</div>
+        </div>
+
+        <div class="input-panel">
+          <div>
+            <label for="api-key">API KEY</label>
+            <input type="password" id="api-key" placeholder="gsk_****************">
+          </div>
+
+          <div id="drop-zone">>> DROP CSV HERE <<</div>
+          <textarea id="csv-input" rows="2" placeholder="OR PASTE CSV"></textarea>
+          
+          <div id="file-status">FILE LOADED: NONE</div>
+        </div>
+
+        <div id="terminal-output">>> READY TO AUDIT. PRESS (A) TO INITIATE.</div>
+
+        <div id="score-reveal">
+          <div id="giant-score" class="giant-score"></div>
+          <div id="progress-bar-container" class="progress-bar-container">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+          </div>
+          <div id="verdict" class="verdict"></div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <div class="controls-area">
+    <div class="d-pad-container">
+      <div class="d-pad d-vertical"></div>
+      <div class="d-pad d-horizontal"></div>
+      <div class="d-pad-center"></div>
+    </div>
+    
+    <div class="action-buttons">
+      <div class="btn-wrapper" style="margin-top: 30px;">
+        <div class="btn-desc-label">DL REPORT</div>
+        <button id="btn-download" class="btn-gameboy" onclick="downloadReport()"></button>
+        <div class="btn-label-inner">B</div>
+      </div>
+      <div class="btn-wrapper">
+        <div class="btn-desc-label">AUDIT</div>
+        <button id="btn-audit" class="btn-gameboy" onclick="initiateAudit()"></button>
+        <div class="btn-label-inner">A</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pill-buttons">
+    <div class="btn-pill-container">
+      <button class="btn-pill" onclick="howToFix()"></button>
+      <div class="pill-label">FIX IT (SELECT)</div>
+    </div>
+    <div class="btn-pill-container">
+      <button class="btn-pill" onclick="location.reload()"></button>
+      <div class="pill-label">RESET (START)</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -351,29 +553,23 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
   let quipInterval;
   let csvData = "";
   
-  const faceEl = document.getElementById('face');
+  const faceImg = document.getElementById('cat-face');
   const quipEl = document.getElementById('quip');
   const termEl = document.getElementById('terminal-output');
   const fileStatus = document.getElementById('file-status');
   const dropZone = document.getElementById('drop-zone');
   const textarea = document.getElementById('csv-input');
   const btnAudit = document.getElementById('btn-audit');
+  const powerLed = document.getElementById('power-led');
   
   window.currentReport = null;
 
-  // Initialize UI
   quipEl.textContent = "WAITING FOR INPUT...";
 
-  // Input Handling: Drag and Drop
   dropZone.addEventListener('dragover', (e) => { 
-    e.preventDefault(); 
-    dropZone.classList.add('dragover'); 
+    e.preventDefault(); dropZone.classList.add('dragover'); 
   });
-  
-  dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('dragover');
-  });
-  
+  dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
@@ -389,58 +585,43 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
     }
   });
 
-  // Input Handling: Textarea Paste
   textarea.addEventListener('input', (e) => {
     let val = e.target.value.trim();
-    if(val.length > 0) {
-      processCSV(val, 'PASTED_DATA.CSV');
-    } else {
+    if(val.length > 0) processCSV(val, 'PASTED_DATA.CSV');
+    else {
       csvData = "";
       fileStatus.textContent = "FILE LOADED: NONE";
-      fileStatus.className = "color-cyan";
+      fileStatus.style.color = "var(--text-color)";
     }
   });
 
   function processCSV(text, filename) {
     let lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-    let rowCount = lines.length;
     let sampled = lines.slice(0, 51).join('\n');
     csvData = sampled;
-    fileStatus.textContent = `FILE LOADED: ${filename.toUpperCase()} (${rowCount} ROWS)`;
-    fileStatus.className = "color-green"; // success
-    termEl.innerHTML = ">> DATA RECEIVED. READY FOR AUDIT.";
+    fileStatus.textContent = `LOADED: ${filename.toUpperCase()} (${lines.length} ROWS)`;
+    fileStatus.style.color = "var(--text-green)";
+    termEl.innerHTML = ">> DATA RECEIVED. PRESS (A) TO AUDIT.";
+    faceImg.src = "assets/cat_idle.png";
+    faceImg.className = "";
   }
 
-  // Audit Execution (Streaming)
   async function initiateAudit() {
     const apiKey = document.getElementById('api-key').value.trim();
     
-    if(!apiKey) { 
-      termEl.innerHTML = '<span class="color-red">>> ERROR: GROQ_API_KEY MISSING.</span>';
-      return; 
-    }
-    if(!csvData) { 
-      termEl.innerHTML = '<span class="color-red">>> ERROR: NO DATA PROVIDED. DROP OR PASTE CSV.</span>';
-      return; 
-    }
+    if(!apiKey) { termEl.innerHTML = '<span class="color-red">>> ERROR: GROQ_API_KEY MISSING.</span>'; return; }
+    if(!csvData) { termEl.innerHTML = '<span class="color-red">>> ERROR: NO DATA PROVIDED.</span>'; return; }
 
-    // Reset UI for new audit
     termEl.innerHTML = "";
     document.getElementById('score-reveal').style.display = "none";
-    faceEl.className = "";
+    
+    // Character enters scanning mode
+    faceImg.src = "assets/cat_scanning.png";
+    faceImg.className = "face-scanning";
+    
     btnAudit.disabled = true;
-    btnAudit.innerText = "[ AUDIT IN PROGRESS ]";
     window.currentReport = null;
     
-    // Animate Face
-    let scanFrame = 0;
-    const scanEyes = ["| @ | | @ |", "| + | | + |", "| x | | x |", "| + | | + |"];
-    let scanInterval = setInterval(() => {
-      faceEl.textContent = scanEyes[scanFrame % scanEyes.length];
-      scanFrame++;
-    }, 150);
-
-    // Rotate Quips
     let qIdx = 0;
     quipEl.textContent = quips[0];
     quipInterval = setInterval(() => {
@@ -448,17 +629,16 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
       quipEl.textContent = quips[qIdx % quips.length];
     }, 3000);
 
+    // Flicker battery LED
+    let ledInterval = setInterval(() => { powerLed.classList.toggle('on'); }, 100);
+
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + apiKey
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
           model: 'llama-3.1-8b-instant',
-          max_tokens: 1500,
-          stream: true,
+          max_tokens: 1500, stream: true,
           messages: [
             { role: 'system', content: SOUL + "\n\n" + RULES },
             { role: 'user', content: "Audit this dataset:\n\n" + csvData }
@@ -466,12 +646,8 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
         })
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "API Request Failed with status " + response.status);
-      }
+      if (!response.ok) throw new Error("API Request Failed: " + response.status);
 
-      // Read Stream
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let done = false;
@@ -481,12 +657,10 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
-        
         if (value) {
           buffer += decoder.decode(value, { stream: true });
           let lines = buffer.split('\n');
-          buffer = lines.pop(); // keep the last incomplete chunk in buffer
-
+          buffer = lines.pop(); // keep remainder
           for (let line of lines) {
             if (line.startsWith('data: ') && line !== 'data: [DONE]') {
               try {
@@ -497,30 +671,28 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
                    renderTerminal(fullResponse, termEl);
                    termEl.scrollTop = termEl.scrollHeight;
                 }
-              } catch(e) {
-                // Ignore silent JSON parse errors on partial stream chunks
-              }
+              } catch(e) {}
             }
           }
         }
       }
 
-      // Wrap Up
-      clearInterval(scanInterval);
       clearInterval(quipInterval);
+      clearInterval(ledInterval);
+      powerLed.classList.add('on');
       quipEl.textContent = "AUDIT COMPLETE.";
       btnAudit.disabled = false;
-      btnAudit.innerText = "[ RE-INITIATE AUDIT ]";
       finishAudit(fullResponse);
 
     } catch(e) {
-      clearInterval(scanInterval);
       clearInterval(quipInterval);
-      faceEl.textContent = "O _ O";
+      clearInterval(ledInterval);
+      powerLed.classList.add('on');
+      faceImg.src = "assets/cat_worried.png";
+      faceImg.className = "";
       quipEl.textContent = "SYSTEM FAULT.";
       termEl.innerHTML += `<br><span class="color-red">>> FATAL ERROR: ${e.message}</span>`;
       btnAudit.disabled = false;
-      btnAudit.innerText = "[ RETRY AUDIT ]";
     }
   }
 
@@ -529,16 +701,14 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
     let lines = text.split('\n');
     lines.forEach(line => {
       let span = document.createElement('span');
-      // Fix potential XSS since we insert text, textContent is safe
       span.textContent = line + '\n';
       
       let lowerLine = line.toLowerCase();
-      // Apply color logic
       if (line.startsWith('##')) {
         span.className = 'color-cyan';
-      } else if (lowerLine.includes('critical') || lowerLine.includes('error') || lowerLine.includes('fail') || lowerLine.includes('bias detected')) {
+      } else if (lowerLine.includes('critical') || lowerLine.includes('error') || lowerLine.includes('fail') || lowerLine.includes('bias')) {
         span.className = 'color-red';
-      } else if (lowerLine.includes('warning') || lowerLine.includes('overfitting') || lowerLine.includes('issue')) {
+      } else if (lowerLine.includes('warning') || lowerLine.includes('overfit') || lowerLine.includes('issue')) {
         span.className = 'color-amber';
       } else {
         span.className = 'color-green';
@@ -554,83 +724,45 @@ Scoring: 1-3=do not ship, 4-6=fixable needs work, 7-9=good minor issues, 10=ship
     
     let scoreReveal = document.getElementById('score-reveal');
     let giantScore = document.getElementById('giant-score');
-    let pbContainer = document.getElementById('progress-bar-container');
     let pbFill = document.getElementById('progress-bar-fill');
     let verdictEl = document.getElementById('verdict');
     
     scoreReveal.style.display = 'block';
     giantScore.textContent = `${score}/10`;
     
-    // Reset bar width for animation frame jump
     pbFill.style.width = "0%";
-    setTimeout(() => {
-       pbFill.style.width = `${(score/10)*100}%`;
-    }, 50);
+    setTimeout(() => { pbFill.style.width = `${(score/10)*100}%`; }, 50);
 
-    let txtColor, colorClass, faceText, faceAnimClass = "";
-    
     if (score >= 1 && score <= 3) {
-       txtColor = 'var(--red)';
-       colorClass = 'color-red';
-       faceText = ">_<";
-       faceAnimClass = "face-shake color-red";
+       faceImg.src = 'assets/cat_angry.png';
+       faceImg.className = 'face-shake';
     } else if (score >= 4 && score <= 6) {
-       txtColor = 'var(--amber)';
-       colorClass = 'color-amber';
-       faceText = "| - | | - |";
-       faceAnimClass = "color-amber";
-    } else if (score >= 7) {
-       txtColor = 'var(--primary-green)';
-       colorClass = 'color-green';
-       faceText = "| ^ | | ^ |";
-       faceAnimClass = "color-green";
+       faceImg.src = 'assets/cat_worried.png';
+       faceImg.className = '';
     } else {
-       txtColor = 'var(--cyan)';
-       colorClass = 'color-cyan';
-       faceText = "? _ ?";
-       faceAnimClass = "color-cyan";
+       faceImg.src = 'assets/cat_happy.png';
+       faceImg.className = '';
     }
 
-    faceEl.textContent = faceText;
-    faceEl.className = faceAnimClass;
-
-    // Determine verdict
     let lines = fullResponse.split('\n');
     let sl = lines.find(l => l.toUpperCase().includes('BLOOP SCORE:'));
-    if (sl) {
-      verdictEl.textContent = sl.trim();
-    } else {
-      verdictEl.textContent = `BLOOP SCORE: ${score}/10`;
-    }
-    
-    scoreReveal.className = colorClass; // Add primary color to reveal block
-    giantScore.className = `giant-score ${colorClass}`;
-    pbContainer.style.color = txtColor;
-    pbFill.style.backgroundColor = txtColor;
-    
+    verdictEl.textContent = sl ? sl.trim() : `BLOOP SCORE: ${score}/10`;
+
     window.currentReport = fullResponse;
     setTimeout(() => { termEl.scrollTop = termEl.scrollHeight; }, 100);
   }
 
   function downloadReport() {
-    if(!window.currentReport) {
-      alert("NO REPORT AVAILABLE TO DOWNLOAD.");
-      return;
-    }
+    if(!window.currentReport) return;
     const blob = new Blob([window.currentReport], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'bloop_report.md';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = 'bloop_report.md';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
-  function howToFix() {
-    alert(">> INITIATING FIX PROTOCOL\\n>> THIS FEATURE CURRENTLY REQUIRES MANUAL REVIEW.\\n>> REFER TO 'HOW TO FIX IT' SECTION IN TERMINAL.");
-  }
+  function howToFix() { alert(">> INITIATING FIX PROTOCOL\\n>> AUTO-FIX REQUIRES PREMIUM AGENT (CARTRIDGE EXPANSION)."); }
 </script>
 </body>
 </html>
