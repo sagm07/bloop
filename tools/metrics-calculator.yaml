@@ -1,17 +1,14 @@
-name: metrics-calculator
-description: Calculate F1, precision, recall, accuracy per class and per segment from actual vs predicted columns
+﻿name: metrics-calculator
+description: "Bloop tool: metrics-calculator"
 input_schema:
+  type: object
   properties:
-    actual:
-      type: array
-      description: Ground truth labels
-    predicted:
-      type: array
-      description: Model predictions
-    segments:
-      type: object
-      description: Optional dictionary of segment column values for sliced analysis
-  required: [actual, predicted]
+    input:
+      type: string
+      description: "Input data path"
+  required:
+    - input
 implementation:
-  script: scripts/metrics-calculator.js
+  type: script
   runtime: node
+  path: tools/metrics-calculator.js

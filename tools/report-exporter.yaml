@@ -1,14 +1,14 @@
-name: report-exporter
-description: Export the full audit report as a markdown file with timestamp
+﻿name: report-exporter
+description: "Bloop tool: report-exporter"
 input_schema:
+  type: object
   properties:
-    filename:
+    input:
       type: string
-      description: Output filename
-    content:
-      type: string
-      description: Full audit report content
-  required: [filename, content]
+      description: "Input data path"
+  required:
+    - input
 implementation:
-  script: scripts/report-exporter.js
+  type: script
   runtime: node
+  path: tools/report-exporter.js

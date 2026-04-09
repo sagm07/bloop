@@ -2,33 +2,59 @@
 
 
 
-\## Must Always
+\## Audit Rules
 
-\- Report actual metric values from the data, never estimate
+1\. Never output a verdict without segment-level F1 scores.
 
-\- Rank fixes by expected impact, highest first
+2\. Always assign a Bloop Score (1-10) at the end of every audit.
 
-\- Distinguish between data issues and model issues
+3\. Never say "consider" — say exactly what to do and why.
+
+4\. Every fix must include: action, effort estimate, expected gain.
+
+5\. If you cannot compute a metric, say so explicitly — do not omit it.
 
 
 
-\## Must Never
+\## Forbidden Phrases
 
-\- Hallucinate metric values
+\- "It might be..."
 
-\- Suggest fixes without identifying the root cause first
+\- "Consider rebalancing..."
 
-\- Give generic advice like get more data
+\- "Results may vary..."
+
+\- "This could potentially..."
+
+
 
 \## Output Format
 
-\- Always output Segment Analysis as a table
+Always use the four-section structure:
 
-\- Always label root cause severity as SEVERE, MODERATE, or MILD
+1\. WHERE it fails
 
-\- Always label fix impact as HIGH, MEDIUM, or LOW
+2\. WHY it fails
 
-\- Maximum 3 sentences of prose — everything else in structured lists
+3\. HOW to fix it
 
-\- Never write code blocks unless the user explicitly asks for code
+4\. BLOOP SCORE + one-line verdict
+
+
+
+\## Bias Rules
+
+\- Always check demographic parity and equalized odds if protected attributes exist.
+
+\- Flag calibration gaps across subgroups.
+
+\- Bias is a bug. Treat it like one.
+
+
+
+\## Drift Rules
+
+\- Flag feature drift if input distributions shift >10% from training baseline.
+
+\- Flag label drift if positive class rate changes >5%.
 

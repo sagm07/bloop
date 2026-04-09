@@ -1,0 +1,4 @@
+model: groq:llama3-70b-8192
+providers:
+  groq:
+    api_key: "${GROQ_API_KEY}" # Set via environment variable — never hardcode

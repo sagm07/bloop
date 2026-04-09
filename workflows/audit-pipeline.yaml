@@ -1,0 +1,61 @@
+name: audit-pipeline
+description: "Bloop's deterministic 3-step ML failure audit pipeline"
+version: "1.0.0"
+
+inputs:
+  dataset:
+    type: string
+    description: "Path to CSV file or inline CSV data to audit"
+    required: true
+
+steps:
+  - id: segment-analysis
+    skill: segment-analysis
+    description: "Identify which segments and classes the model fails on"
+    inputs:
+      dataset: ${{ inputs.dataset }}
+    outputs:
+      - id: segment_table
+        description: "Markdown table of segments with F1, precision, recall, severity"
+      - id: worst_segments
+        description: "List of segments with F1 below 0.5 — critical failures"
+      - id: summary
+        description: "One-paragraph summary of the segment analysis findings"
+
+  - id: root-cause
+    skill: root-cause
+    description: "Diagnose why the model fails on the identified segments"
+    depends_on: [segment-analysis]
+    inputs:
+      dataset: ${{ inputs.dataset }}
+      segments: ${{ steps.segment-analysis.outputs.worst_segments }}
+      segment_summary: ${{ steps.segment-analysis.outputs.summary }}
+    outputs:
+      - id: root_causes
+        description: "Ranked list of root causes with evidence and severity labels"
+      - id: primary_cause
+        description: "The single most impactful root cause identified"
+
+  - id: fix-generator
+    skill: fix-generator
+    description: "Produce ranked, specific fixes for each confirmed root cause"
+    depends_on: [root-cause]
+    condition: "${{ steps.root-cause.outputs.root_causes != null }}"
+    inputs:
+      root_causes: ${{ steps.root-cause.outputs.root_causes }}
+      primary_cause: ${{ steps.root-cause.outputs.primary_cause }}
+      segment_table: ${{ steps.segment-analysis.outputs.segment_table }}
+    outputs:
+      - id: fix_plan
+        description: "Numbered action plan with fix, expected F1 gain, and effort level"
+      - id: bloop_score
+        description: "Integer 1-10. Follows scoring guide in SOUL.md"
+      - id: verdict
+        description: "One-line Bloop verdict in quotes — the score justified in a sentence"
+
+outputs:
+  segment_table: ${{ steps.segment-analysis.outputs.segment_table }}
+  root_causes: ${{ steps.root-cause.outputs.root_causes }}
+  fix_plan: ${{ steps.fix-generator.outputs.fix_plan }}
+  bloop_score: ${{ steps.fix-generator.outputs.bloop_score }}
+  verdict: ${{ steps.fix-generator.outputs.verdict }}

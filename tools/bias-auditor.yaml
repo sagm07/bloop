@@ -1,17 +1,14 @@
-name: drift-detector
-description: Detect distribution shift between two datasets or between feature distributions using PSI and KS statistics
+name: bias-auditor
+description: "Detects demographic parity and equalized odds gaps across subgroups"
 input_schema:
+  type: object
   properties:
-    reference:
-      type: array
-      description: Reference dataset (training distribution)
-    current:
-      type: array
-      description: Current dataset (test or production distribution)
-    columns:
-      type: array
-      description: Columns to check for drift
-  required: [reference, current]
+    metrics_file:
+      type: string
+      description: "Path to CSV with segment-level metrics"
+  required:
+    - metrics_file
 implementation:
-  script: scripts/drift-detector.js
+  type: script
   runtime: node
+  path: tools/bias-auditor.js

@@ -1,14 +1,14 @@
-name: csv-loader
-description: Load and parse any CSV file, detect columns, identify actual vs predicted, flag missing values and duplicates
+﻿name: csv-loader
+description: "Bloop tool: csv-loader"
 input_schema:
+  type: object
   properties:
-    filepath:
+    input:
       type: string
-      description: Path to the CSV file
-    target_column:
-      type: string
-      description: The column being predicted (optional, Bloop will detect if not provided)
-  required: [filepath]
+      description: "Input data path"
+  required:
+    - input
 implementation:
-  script: scripts/csv-loader.js
+  type: script
   runtime: node
+  path: tools/csv-loader.js
