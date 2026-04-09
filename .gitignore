@@ -6,4 +6,3 @@ reports/
 .DS_Store
 Thumbs.db
 .gitagent/audit.jsonl
-memory/runtime/context.md
