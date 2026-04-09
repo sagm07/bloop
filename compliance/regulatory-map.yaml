@@ -1,0 +1,11 @@
+name: regulatory-map
+description: Governance and compliance mappings for the Bloop agent
+version: "1.0.0"
+
+documents:
+  - id: segregation-of-duties
+    file: ../DUTIES.md
+    description: Strict role segregation enforcing Auditor, Analyst, and Executor domains to prevent hallucinations in fix prescriptions.
+  - id: hard-constraints
+    file: ../RULES.md
+    description: Immutability rules and bounds on how Bloop may represent metrics.

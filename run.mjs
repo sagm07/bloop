@@ -7,12 +7,27 @@ import readline from "readline";
 const soul = fs.readFileSync("SOUL.md", "utf8");
 const rules = fs.readFileSync("RULES.md", "utf8");
 const taxonomy = fs.readFileSync("knowledge/ml-failure-taxonomy.md", "utf8");
-const patterns = fs.readFileSync("memory/runtime/patterns.md", "utf8");
+const patterns = fs.readFileSync("memory/runtime/key-decisions.md", "utf8");
 const dailylog = fs.readFileSync("memory/runtime/dailylog.md", "utf8");
 
 const segmentSkill = fs.readFileSync("skills/segment-analysis/SKILL.md", "utf8");
 const rootCauseSkill = fs.readFileSync("skills/root-cause/SKILL.md", "utf8");
 const fixSkill = fs.readFileSync("skills/fix-generator/SKILL.md", "utf8");
+const wikiQuerySkill = fs.readFileSync("skills/wiki-query/SKILL.md", "utf8");
+const wikiIngestSkill = fs.readFileSync("skills/wiki-ingest/SKILL.md", "utf8");
+
+// ─── Load Wiki Context ────────────────────────────────────────────────────────
+function getWikiContext() {
+  const wikiDir = "memory/wiki";
+  if (!fs.existsSync(wikiDir)) return "";
+  let wikiText = "";
+  for (const file of fs.readdirSync(wikiDir)) {
+    if (file.endsWith(".md")) {
+      wikiText += `\n---\nWiki Document: ${file}\n` + fs.readFileSync(path.join(wikiDir, file), "utf8");
+    }
+  }
+  return wikiText;
+}
 
 // ─── Bootstrap: session context ────────────────────────────────────────────────
 const sessionId = `session-${Date.now()}`;
@@ -114,13 +129,24 @@ async function runAuditPipeline(dataset) {
   contextState.segment_analysis_complete = true;
   console.log("\nBloop [Auditor]:\n" + segmentOutput);
 
+  console.log("\n── STEP 1.5: LLM Wiki Query (Librarian role) ─────────────────");
+  const rawWiki = getWikiContext();
+  let historicalContext = "No historical wiki data available.";
+  if (rawWiki.trim().length > 0) {
+    historicalContext = await callSkill("wiki-query", wikiQuerySkill, "Extract past learnings from the wiki:", `Wiki content:\n${rawWiki}\n\nCurrent failures:\n${segmentOutput}`);
+    console.log("\nBloop [Librarian]:\n" + historicalContext);
+  } else {
+    console.log("\nBloop [Librarian]: No historical wiki data available.");
+  }
+  const enrichedContext = knowledgeContext + `\n\n## Historical Wiki Learnings\n${historicalContext}`;
+
   console.log("\n── STEP 2/3: Root Cause Analysis (Analyst role) ──────────────");
   contextState.pipeline_stage = "root-cause";
 
   const rootCauseOutput = await callSkill(
     "root-cause",
     rootCauseSkill,
-    knowledgeContext,
+    enrichedContext,
     `The segment analysis found the following failures:\n\n${segmentOutput}\n\nDiagnose the root causes. Cite specific numbers. Do not suggest fixes.`
   );
 
@@ -133,7 +159,7 @@ async function runAuditPipeline(dataset) {
   const fixOutput = await callSkill(
     "fix-generator",
     fixSkill,
-    knowledgeContext,
+    enrichedContext,
     `Root causes confirmed by the Analyst:\n\n${rootCauseOutput}\n\nSegment context:\n${segmentOutput}\n\nPrescribe ranked fixes for each confirmed root cause. Calculate the Bloop Score. Output a one-line verdict.`
   );
 
@@ -149,8 +175,16 @@ async function runAuditPipeline(dataset) {
 }
 
 // ─── Teardown: write memory ───────────────────────────────────────────────────
-function teardown(datasetName, result) {
+async function teardown(datasetName, result) {
   const { segmentOutput, rootCauseOutput, fixOutput, bloopScore } = result;
+
+  console.log("\n── POST-AUDIT: Wiki Ingest (Archivist role) ──────────────────");
+  const ingestPrompt = `Segment Analysis:\n${segmentOutput}\n\nRoot Causes:\n${rootCauseOutput}\n\nFix Plan:\n${fixOutput}`;
+  const newWikiArticle = await callSkill("wiki-ingest", wikiIngestSkill, "Synthesize this audit into a generic wiki article.", ingestPrompt);
+  
+  const articleName = `memory/wiki/learning-${Date.now()}.md`;
+  fs.writeFileSync(articleName, newWikiArticle);
+  console.log(`✓ New LLM Wiki article archived at ${articleName}`);
   const timestamp = new Date().toISOString();
 
   // Append to daily log
@@ -195,7 +229,7 @@ if (csvFile && csvData) {
   contextState.dataset_loaded = csvFile;
 
   const result = await runAuditPipeline(csvData);
-  teardown(path.basename(csvFile), result);
+  await teardown(path.basename(csvFile), result);
   console.log("\nBloop out.");
 } else {
   // Interactive mode — accept a single prompt, then run the pipeline
@@ -207,7 +241,7 @@ if (csvFile && csvData) {
     if (!input.trim()) { console.log("Bloop: No input. Exiting."); process.exit(0); }
 
     const result = await runAuditPipeline(input);
-    teardown("interactive-session", result);
+    await teardown("interactive-session", result);
     console.log("\nBloop out.");
   });
 }

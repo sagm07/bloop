@@ -31,7 +31,7 @@ jobs:
           test -f SOUL.md           && echo "✓ SOUL.md" || (echo "✗ SOUL.md MISSING" && exit 1)
           test -f RULES.md          && echo "✓ RULES.md" || (echo "✗ RULES.md MISSING" && exit 1)
           test -f DUTIES.md         && echo "✓ DUTIES.md" || (echo "✗ DUTIES.md MISSING" && exit 1)
-          test -f workflows/audit-pipeline.yaml && echo "✓ workflows/audit-pipeline.yaml" || (echo "✗ workflow MISSING" && exit 1)
+          test -f skillflows/audit-pipeline.yaml && echo "✓ skillflows/audit-pipeline.yaml" || (echo "✗ workflow MISSING" && exit 1)
           test -f hooks/bootstrap.md  && echo "✓ hooks/bootstrap.md" || (echo "✗ bootstrap hook MISSING" && exit 1)
           test -f hooks/teardown.md   && echo "✓ hooks/teardown.md" || (echo "✗ teardown hook MISSING" && exit 1)
           test -f knowledge/ml-failure-taxonomy.md && echo "✓ knowledge/ml-failure-taxonomy.md" || (echo "✗ taxonomy MISSING" && exit 1)
@@ -57,7 +57,7 @@ jobs:
         run: |
           node -e "
           import('fs').then(fs => {
-            const workflow = fs.readFileSync('workflows/audit-pipeline.yaml', 'utf8');
+            const workflow = fs.readFileSync('skillflows/audit-pipeline.yaml', 'utf8');
             if (!workflow.includes('segment-analysis')) { console.error('Missing segment-analysis step'); process.exit(1); }
             if (!workflow.includes('root-cause'))       { console.error('Missing root-cause step'); process.exit(1); }
             if (!workflow.includes('fix-generator'))    { console.error('Missing fix-generator step'); process.exit(1); }
@@ -84,7 +84,7 @@ jobs:
       - name: Validate memory structure
         run: |
           test -f memory/runtime/dailylog.md  && echo "✓ memory/runtime/dailylog.md" || (echo "✗ dailylog MISSING" && exit 1)
-          test -f memory/runtime/patterns.md  && echo "✓ memory/runtime/patterns.md" || (echo "✗ patterns MISSING" && exit 1)
+          test -f memory/runtime/key-decisions.md  && echo "✓ memory/runtime/key-decisions.md" || (echo "✗ key-decisions MISSING" && exit 1)
           test -f memory/runtime/context.md   && echo "✓ memory/runtime/context.md" || (echo "✗ context MISSING" && exit 1)
 
       - name: All checks passed

@@ -1,0 +1,12 @@
+name: knowledge-index
+description: Central index for the agent's passive and active knowledge items.
+
+namespaces:
+  - id: taxonomy
+    path: ./ml-failure-taxonomy.md
+    type: static
+    description: Static source mapping ML patterns to fixes.
+  - id: wiki
+    path: ../memory/wiki/
+    type: dynamic
+    description: Dynamically generated wiki compilation of model failures over time.
