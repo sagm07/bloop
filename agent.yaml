@@ -18,6 +18,11 @@ skills:
   - fix-generator
   - audit-model
   - write-report
+tools:
+  - csv-parser        # implemented: metrics.mjs
+  - report-exporter   # planned: v0.4
+  - drift-detector    # planned: v0.5
+  - bias-auditor      # planned: v0.5
 tags:
   - ml
   - bias-detection

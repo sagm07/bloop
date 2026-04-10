@@ -14,6 +14,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "csv-parse": "^6.2.1",
     "gitclaw": "*",
     "openai": "^4.0.0"
   }

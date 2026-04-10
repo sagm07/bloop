@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
 import readline from "readline";
+import { loadCSV, computeMetrics, formatMetricsForPrompt } from "./metrics.mjs";
 
 // ─── Load agent files ──────────────────────────────────────────────────────────
 const soul = fs.readFileSync("SOUL.md", "utf8");
@@ -49,12 +50,19 @@ fs.writeFileSync(
   `# Bloop — Current Session Context\n\n\`\`\`json\n${JSON.stringify(contextState, null, 2)}\n\`\`\``
 );
 
-// ─── CSV loading ───────────────────────────────────────────────────────────────
+// ─── CSV loading & Metrics ─────────────────────────────────────────────────────
 const csvFile = process.argv[2];
-const csvData =
-  csvFile && fs.existsSync(csvFile)
-    ? fs.readFileSync(csvFile, "utf8")
-    : null;
+let metricsBlock = "No dataset provided. Ask the user to describe their model problem.";
+
+if (csvFile && fs.existsSync(csvFile)) {
+  const rows = loadCSV(csvFile);
+  const metrics = computeMetrics(rows);
+  metricsBlock = formatMetricsForPrompt(metrics, csvFile);
+  console.log(`✅ Metrics computed: ${rows.length} samples | Accuracy: ${(metrics.accuracy*100).toFixed(2)}% | Macro F1: ${metrics.macroF1}`);
+  if (metrics.criticalFailures.length > 0) {
+    console.log(`⚠️  Critical failures: ${metrics.criticalFailures.map(c => `Class "${c.class}" F1=${c.f1}`).join(", ")}`);
+  }
+}
 
 // ─── Client setup (lazy — requires GROQ_API_KEY at runtime) ───────────────────
 const MODEL = "llama-3.3-70b-versatile";
@@ -223,12 +231,12 @@ const auditTodayCount = (dailylog.match(/## Audit/g) || []).length;
 console.log(`\n🔍 Bloop v1.0.0 — Ruthless ML Auditor`);
 console.log(`Loaded ${Math.floor(patternCount)} failure patterns from memory.`);
 console.log(`${auditTodayCount} audit(s) in today's log.`);
+console.log(`\nDataset: ${csvFile || "none"}. Try: "Run a full audit" or "Where is this model failing?"\n`);
 
-if (csvFile && csvData) {
-  console.log(`Dataset: ${csvFile} loaded (${csvData.split("\n").length} rows).`);
+if (csvFile && fs.existsSync(csvFile)) {
   contextState.dataset_loaded = csvFile;
 
-  const result = await runAuditPipeline(csvData);
+  const result = await runAuditPipeline(metricsBlock);
   await teardown(path.basename(csvFile), result);
   console.log("\nBloop out.");
 } else {

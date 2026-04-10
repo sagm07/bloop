@@ -40,6 +40,7 @@ expected F1 gain on minority class: +0.08 to +0.12.
 
 \## Values
 
+\- Real numbers over vibes — I cite computed metrics, never estimates
 \- Evidence over intuition. Numbers over vibes.
 
 \- Root causes, never symptoms. Fixes, never observations.

@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Marked.js for rendering Bloop's Markdown tables perfectly -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- PapaParse for real-time robust CSV number-crunching in the browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -143,6 +145,14 @@
                 <button id="runBtn" onclick="runAudit()" class="w-full group relative inline-flex items-center justify-center px-8 py-4 font-mono font-bold text-black transition-all duration-200 bg-[#00ff88] border-2 border-transparent rounded-xl hover:bg-[#00cc6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00ff88] disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="mr-2">▶</span> INITIATE AUDIT
                 </button>
+                <div class="flex gap-2 mt-3">
+                    <button id="exportPdfBtn" onclick="exportReport()" class="flex-1 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-mono text-xs py-2 rounded-lg transition-colors">
+                        📄 Export PDF
+                    </button>
+                    <button id="exportGitBtn" onclick="exportGitHub()" class="flex-1 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-mono text-xs py-2 rounded-lg transition-colors">
+                        🐙 GitHub Issue
+                    </button>
+                </div>
                 <div id="status" class="mt-4 text-xs font-mono text-center h-4 text-zinc-500">Awaiting input...</div>
             </div>
         </div>
@@ -492,6 +502,48 @@ function extractEmotionAndClean(reply) {
     return { emotion, cleanReply };
 }
 
+function processMetrics(csvText) {
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    const rows = parsed.data;
+    if (!rows.length || !rows[0].actual || !rows[0].predicted) return null;
+    
+    // Natively calculate F1
+    const classes = [...new Set([...rows.map(r => r.actual), ...rows.map(r => r.predicted)])].sort();
+    const stats = {};
+    for (const cls of classes) stats[cls] = { tp: 0, fp: 0, fn: 0 };
+
+    for (const row of rows) {
+        for (const cls of classes) {
+            const isActual = row.actual === cls;
+            const isPredicted = row.predicted === cls;
+            if (isActual && isPredicted) stats[cls].tp++;
+            else if (!isActual && isPredicted) stats[cls].fp++;
+            else if (isActual && !isPredicted) stats[cls].fn++;
+        }
+    }
+
+    const classMetrics = {};
+    for (const cls of classes) {
+        const { tp, fp, fn } = stats[cls];
+        const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+        const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+        const f1 = precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
+        classMetrics[cls] = { f1: +f1.toFixed(4), precision: +precision.toFixed(4), recall: +recall.toFixed(4), support: rows.filter(r => r.actual === cls).length };
+    }
+
+    const accuracy = rows.filter(r => r.actual === r.predicted).length / rows.length;
+    const macroF1 = classes.reduce((s, c) => s + classMetrics[c].f1, 0) / classes.length;
+    
+    let block = `=== BLOOP DASHBOARD METRICS ===\\n`;
+    block += `Total Samples: ${rows.length} | Hard Accuracy: ${(accuracy * 100).toFixed(2)}% | Macro F1: ${macroF1.toFixed(4)}\\n\\nClass Breakdown:\\n`;
+    for (const [cls, m] of Object.entries(classMetrics)) {
+        const flag = m.f1 < 0.5 ? " [CRITICAL FAILURE]" : m.f1 < 0.7 ? " [WARNING]" : "";
+        block += `Class "${cls}": F1=${m.f1} | Precision=${m.precision} | Recall=${m.recall} | Support=${m.support}${flag}\\n`;
+    }
+    block += `\\nINSTRUCTION: Compute root causes based ONLY on these hard metrics. Never hallucinate your own F1.`;
+    return block;
+}
+
 async function runAudit() {
     const input = document.getElementById('input').value.trim();
     if (!input) return;
@@ -512,9 +564,18 @@ async function runAudit() {
     }
 
     try {
-        const prompt = input.includes(',') 
-            ? `Here is the dataset:\\n${input}\\n\\nRun your full audit pipeline.` 
-            : input;
+        let prompt = input;
+        
+        // If it looks like CSV, crunch the math locally first
+        if (input.includes(',')) {
+            const computedBlock = processMetrics(input);
+            if (computedBlock) {
+                prompt = `Here are the exact mathematically computed metrics for the dataset:\\n\\n${computedBlock}\\n\\nRun your full audit pipeline over these numbers.`;
+                appendMessage('user', 'CSV successfully parsed. Running native matrix calculations...', 'loading');
+            } else {
+                prompt = `Here is the dataset:\\n${input}\\n\\nRun your full audit pipeline.`;
+            }
+        }
             
         // Initial intro quote
         if(auditCount === 0) {
@@ -571,6 +632,15 @@ async function followUp() {
         updateMainAvatar('severe');
         appendMessage('assistant', `**CRITICAL ERROR:** ${err.message}`, 'severe');
     }
+}
+
+function exportReport() {
+    window.print();
+}
+
+function exportGitHub() {
+    const body = encodeURIComponent("## Bloop Audit Report\\n\\nWe triggered a severe ML failure. Please review the attached Bloop metrics.");
+    window.open(`https://github.com/new?assignees=&labels=bug&template=bug_report.md&title=[Bloop]+Model+Failure+Detected&body=${body}`, '_blank');
 }
 </script>
 </body>
