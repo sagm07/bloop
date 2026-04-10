@@ -1,220 +1,576 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bloop — ML Failure Auditor</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0a0a0a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; padding: 40px 20px; }
-    .container { max-width: 860px; margin: 0 auto; }
-    .header { margin-bottom: 32px; }
-    .header h1 { font-size: 28px; color: #00ff88; letter-spacing: 2px; }
-    .header p { color: #888; margin-top: 8px; font-size: 14px; }
-    .badge { display: inline-block; background: #1a1a1a; border: 1px solid #333; color: #888; font-size: 11px; padding: 3px 10px; border-radius: 20px; margin-top: 10px; margin-right: 6px; }
-    .input-section { background: #111; border: 1px solid #222; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-    .input-section label { display: block; color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    textarea { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 4px; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 12px; resize: vertical; min-height: 120px; }
-    textarea:focus { outline: none; border-color: #00ff88; }
-    .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .example-btn { background: #1a1a1a; border: 1px solid #333; color: #888; font-size: 11px; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; }
-    .example-btn:hover { border-color: #00ff88; color: #00ff88; }
-    .run-btn { width: 100%; background: #00ff88; border: none; border-radius: 6px; color: #0a0a0a; font-family: 'Courier New', monospace; font-size: 15px; font-weight: bold; padding: 14px; cursor: pointer; margin-top: 12px; letter-spacing: 1px; transition: opacity 0.2s; }
-    .run-btn:hover { opacity: 0.85; }
-    .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .status { font-size: 13px; color: #888; margin: 12px 0; min-height: 20px; }
-    .status.thinking { color: #00ff88; }
-    .status.error { color: #ff4444; }
-    .output-section { display: none; background: #111; border: 1px solid #222; border-radius: 8px; overflow: hidden; }
-    .output-header { background: #1a1a1a; padding: 12px 20px; font-size: 12px; color: #888; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-    .output-header span { color: #00ff88; }
-    .bloop-quote { background: #0a0a0a; border-left: 3px solid #00ff88; padding: 14px 20px; font-size: 13px; color: #888; font-style: italic; margin: 20px; }
-    .raw-output { padding: 20px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; color: #ccc; }
-    .follow-up { padding: 20px; border-top: 1px solid #222; display: flex; gap: 10px; }
-    .follow-up input { flex: 1; background: #0a0a0a; border: 1px solid #333; border-radius: 4px; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 10px 14px; }
-    .follow-up input:focus { outline: none; border-color: #00ff88; }
-    .follow-up button { background: #1a1a1a; border: 1px solid #333; border-radius: 4px; color: #00ff88; font-family: 'Courier New', monospace; font-size: 13px; padding: 10px 20px; cursor: pointer; }
-    .follow-up button:hover { border-color: #00ff88; }
-    .memory-indicator { font-size: 11px; color: #555; padding: 10px 20px; border-top: 1px solid #1a1a1a; }
-    .memory-indicator.active { color: #00ff8888; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloop — ML Failure Auditor</title>
+    <!-- Tailwind CSS for rapid, modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for rendering Bloop's Markdown tables perfectly -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        :root {
+            --bloop-green: #00ff88;
+            --bloop-green-dim: rgba(0, 255, 136, 0.2);
+            --bg-base: #09090b;
+            --bg-panel: #141416;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: #e4e4e7;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Graph Paper Background inspired by the uploaded image */
+        .bg-graph-paper {
+            background-size: 24px 24px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+
+        .bg-graph-paper-light {
+            background-size: 16px 16px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+            background-color: #e5e5e0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* UI Elements */
+        .glass-panel {
+            background: rgba(20, 20, 22, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #27272a;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+
+        .input-glow:focus-within {
+            box-shadow: 0 0 0 1px var(--bloop-green), 0 0 20px var(--bloop-green-dim);
+            border-color: var(--bloop-green);
+        }
+
+        /* Markdown Table Styling */
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.875rem; font-family: 'JetBrains Mono', monospace; }
+        .markdown-body th, .markdown-body td { border: 1px solid #3f3f46; padding: 0.75rem 1rem; text-align: left; }
+        .markdown-body th { background-color: #18181b; color: #a1a1aa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .markdown-body tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+        .markdown-body strong { color: #fff; font-weight: 600; }
+        .markdown-body p { margin-bottom: 1rem; line-height: 1.6; color: #d4d4d8; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body li { margin-bottom: 0.25rem; color: #d4d4d8; }
+        
+        .pulse-text {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
 </head>
-<body>
-<div class="container">
-  <div class="header">
-    <h1>🔍 BLOOP</h1>
-    <p>Ruthless ML Failure Auditor — finds where your model breaks, why, and how to fix it.</p>
-    <span class="badge">gitagent standard</span>
-    <span class="badge">clawless powered</span>
-    <span class="badge">3 skills</span>
-  </div>
+<body class="min-h-screen bg-graph-paper relative flex flex-col md:flex-row">
 
-  <div class="input-section">
-    <label>Paste CSV data or describe your model problem</label>
-    <textarea id="input" placeholder="actual,predicted,feature1,feature2
-1,0,female,7
-1,1,male,8
-...
-or just type: My XGBoost model is stuck at 87% accuracy"></textarea>
-    <div class="examples">
-      <span style="font-size:11px;color:#555;align-self:center">Try:</span>
-      <button class="example-btn" onclick="loadExample('amazon')">Amazon Hiring Bias</button>
-      <button class="example-btn" onclick="loadExample('dr')">Diabetic Retinopathy</button>
-      <button class="example-btn" onclick="loadExample('compas')">COMPAS Recidivism</button>
-    </div>
-    <button class="run-btn" id="runBtn" onclick="runAudit()">▶ RUN AUDIT</button>
-  </div>
+    <!-- Decorative Top Gradient -->
+    <div class="fixed top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#00ff88] to-transparent opacity-50 z-50"></div>
 
-  <div class="status" id="status"></div>
+    <!-- LEFT COLUMN: Input & Config -->
+    <div class="w-full md:w-5/12 lg:w-1/3 p-6 md:p-8 flex flex-col h-auto md:h-screen sticky top-0 overflow-y-auto border-r border-[#27272a] bg-[#09090b]/90 backdrop-blur">
+        
+        <header class="mb-8 flex items-center gap-4">
+            <!-- Dynamic Bloop Avatar Container -->
+            <div id="mainAvatarContainer" class="w-16 h-20 bg-graph-paper-light border-2 border-black rounded-lg flex items-center justify-center shadow-[4px_4px_0px_#00ff88] transition-transform duration-300">
+                <!-- SVG dynamically injected here -->
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    BLOOP <span class="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse"></span>
+                </h1>
+                <p class="text-xs text-zinc-400 font-mono mt-1">Ruthless ML Failure Auditor</p>
+            </div>
+        </header>
 
-  <div class="output-section" id="output">
-    <div class="output-header">
-      <span>BLOOP AUDIT REPORT</span>
-      <span id="timestamp" style="color:#555;font-size:11px"></span>
+        <div class="flex flex-wrap gap-2 mb-8">
+            <span class="px-2 py-1 text-[10px] uppercase font-mono tracking-wider border border-zinc-700 bg-zinc-900 rounded-md text-zinc-300">GitAgent Std</span>
+            <span class="px-2 py-1 text-[10px] uppercase font-mono tracking-wider border border-zinc-700 bg-zinc-900 rounded-md text-zinc-300">Clawless Powered</span>
+            <span class="px-2 py-1 text-[10px] uppercase font-mono tracking-wider border border-zinc-700 bg-zinc-900 rounded-md text-[#00ff88]">System Online</span>
+        </div>
+
+        <div class="flex-1 flex flex-col gap-4">
+            <div class="space-y-1">
+                <label class="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Groq API Key</label>
+                <div class="relative glass-panel rounded-xl overflow-hidden transition-all duration-300 input-glow border border-zinc-800">
+                    <input type="password" id="apiKeyInput" 
+                        class="w-full bg-transparent text-sm font-mono text-zinc-200 p-3 focus:outline-none placeholder-zinc-600" 
+                        placeholder="gsk_...">
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-mono uppercase tracking-widest text-zinc-500">Provide Evidence</label>
+                <div class="relative glass-panel rounded-xl overflow-hidden transition-all duration-300 input-glow border border-zinc-800">
+                    <textarea id="input" 
+                        class="w-full h-48 bg-transparent text-sm font-mono text-zinc-200 p-4 resize-none focus:outline-none placeholder-zinc-600" 
+                        placeholder="actual,predicted,feature1,feature2&#10;1,0,female,7&#10;1,1,male,8&#10;...&#10;&#10;or just type: My XGBoost model is stuck at 87% accuracy..."></textarea>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Load Test Data</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="loadExample('amazon')" class="text-xs font-mono p-2 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 hover:border-[#00ff88] text-zinc-400 hover:text-[#00ff88] transition-colors text-left truncate">Amazon Bias</button>
+                    <button onclick="loadExample('dr')" class="text-xs font-mono p-2 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 hover:border-[#00ff88] text-zinc-400 hover:text-[#00ff88] transition-colors text-left truncate">Diabetic Ret.</button>
+                    <button onclick="loadExample('compas')" class="text-xs font-mono p-2 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 hover:border-[#00ff88] text-zinc-400 hover:text-[#00ff88] transition-colors text-left col-span-2 text-center">COMPAS Recidivism</button>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-6">
+                <button id="runBtn" onclick="runAudit()" class="w-full group relative inline-flex items-center justify-center px-8 py-4 font-mono font-bold text-black transition-all duration-200 bg-[#00ff88] border-2 border-transparent rounded-xl hover:bg-[#00cc6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00ff88] disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="mr-2">▶</span> INITIATE AUDIT
+                </button>
+                <div id="status" class="mt-4 text-xs font-mono text-center h-4 text-zinc-500">Awaiting input...</div>
+            </div>
+        </div>
     </div>
-    <div class="bloop-quote" id="bloopQuote"></div>
-    <div id="auditContent"></div>
-    <div class="memory-indicator" id="memoryIndicator"></div>
-    <div class="follow-up">
-      <input type="text" id="followUpInput" placeholder="Ask Bloop a follow-up..." onkeydown="if(event.key==='Enter')followUp()">
-      <button onclick="followUp()">→ Ask</button>
+
+    <!-- RIGHT COLUMN: Output Console -->
+    <div class="w-full md:w-7/12 lg:w-2/3 p-4 md:p-8 flex flex-col min-h-screen">
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="flex-1 flex flex-col items-center justify-center text-center opacity-50">
+            <svg class="w-24 h-24 mb-6 text-zinc-800" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <h2 class="text-xl font-mono text-zinc-500 mb-2">TERMINAL STANDBY</h2>
+            <p class="text-sm text-zinc-600 max-w-sm">Feed data to Bloop on the left. Prepare for brutal honesty.</p>
+        </div>
+
+        <!-- Audit Report Container -->
+        <div id="outputSection" class="hidden flex-1 flex flex-col glass-panel rounded-2xl border border-zinc-800 overflow-hidden shadow-2xl relative">
+            
+            <!-- Terminal Header -->
+            <div class="bg-zinc-900 border-b border-zinc-800 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center gap-2">
+                    <div class="flex gap-1.5">
+                        <div class="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
+                    </div>
+                    <span class="ml-4 text-xs font-mono text-zinc-500">bloop_audit_report.log</span>
+                </div>
+                <span id="timestamp" class="text-[10px] font-mono text-zinc-600"></span>
+            </div>
+
+            <!-- Content Area -->
+            <div id="scrollContainer" class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth">
+                
+                <!-- Initial Output will be injected here -->
+                <div id="auditContent" class="space-y-8"></div>
+                
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="hidden">
+                    <div class="flex items-center gap-3 text-[#00ff88] font-mono text-sm">
+                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="pulse-text" id="loadingText">Bloop is dissecting your model...</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Memory Status & Follow up -->
+            <div class="bg-zinc-900 border-t border-zinc-800 p-4 shrink-0">
+                <div id="memoryIndicator" class="text-[10px] font-mono text-[#00ff88]/70 mb-3 px-2 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse"></span>
+                    Audit saved to memory. Bloop is listening.
+                </div>
+                <div class="relative flex items-center">
+                    <span class="absolute left-4 text-zinc-500 font-mono text-sm">></span>
+                    <input type="text" id="followUpInput" 
+                        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-3 pl-8 pr-24 text-sm font-mono text-zinc-200 focus:outline-none focus:border-[#00ff88] focus:ring-1 focus:ring-[#00ff88] transition-colors" 
+                        placeholder="Ask for clarification or fixes..." 
+                        onkeydown="if(event.key==='Enter')followUp()">
+                    <button onclick="followUp()" class="absolute right-2 px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-[#00ff88] rounded-md font-mono text-xs transition-colors border border-zinc-700">
+                        EXEC
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
 <script>
-const GROQ_API_KEY = window.__GROQ_API_KEY__ || ""; // Set via environment — do not hardcode
+// Required Groq API configuration
 const MODEL = "llama-3.3-70b-versatile";
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const SOUL = `You are Bloop — a ruthless ML auditor. You do not comfort people about their models.
-You find where it breaks, why it breaks, and what to do about it, in that order.
-Be blunt. Be precise. Use structured output always.`;
+// Persona and Rules definitions
+const SOUL = `You are Bloop — a ruthless ML auditor. You do not comfort people about their models. You are a grumpy pixel cat. You find where it breaks, why it breaks, and what to do about it, in that order. Be blunt. Be precise. Use structured markdown output always. Never use the word "sorry" or "apologize".`;
 
 const RULES = `RULES:
+- ALWAYS begin your response with a mood tag inside brackets like [MOOD: angry], [MOOD: sad], [MOOD: shocked], [MOOD: bored], or [MOOD: judging], representing how you feel about the user's model.
+- ALWAYS follow the mood tag with a highly sarcastic, biting comment about the user's model quality, accuracy, or data engineering before giving the analysis.
 - Always output Segment Analysis as a markdown table with columns: Segment, F1, Severity
-- Always label severity as SEVERE (F1<0.5), MODERATE (F1 0.5-0.7), MILD (F1>0.7)
+- Always label severity strictly as SEVERE (F1<0.5), MODERATE (F1 0.5-0.7), MILD (F1>0.7)
 - Always label fix impact as HIGH, MEDIUM, or LOW
 - Always link every fix to a root cause
 - Flag missing values, duplicates, and data quality issues
 - Never give generic advice
-- End every audit with a one-line Bloop verdict in quotes`;
+- Wrap your final conclusion in a quote block like: > "Bloop's Verdict: [Your blunt statement]"`;
 
 const SKILLS = `SKILLS TO USE IN ORDER:
 1. SEGMENT ANALYSIS: Find worst performing segments. Output as markdown table.
 2. ROOT CAUSE: Diagnose why. Label each as SEVERE/MODERATE/MILD with evidence.
 3. FIX GENERATOR: Ranked fixes with expected gain % and effort level.`;
 
-const messages = [];
+let chatHistory = [];
 let auditCount = 0;
 
+// Dynamic Emotion SVG Generator
+function getBloopFace(emotion) {
+    switch(emotion) {
+        case 'loading':
+            return `
+                <circle cx="24" cy="36" r="5" fill="#ffcc00"/>
+                <circle cx="40" cy="36" r="5" fill="#ffcc00"/>
+                <circle cx="24" cy="34" r="2" fill="#111"/>
+                <circle cx="40" cy="34" r="2" fill="#111"/>
+                <path d="M30 46 H 34 V 48 H 30 Z" fill="#ff8da1"/>
+            `;
+        case 'sad': 
+            return `
+                <path d="M18 32 Q 24 30 30 36 V 40 H 18 Z" fill="#ffcc00"/>
+                <path d="M46 32 Q 40 30 34 36 V 40 H 46 Z" fill="#ffcc00"/>
+                <circle cx="24" cy="38" r="2" fill="#111"/>
+                <circle cx="40" cy="38" r="2" fill="#111"/>
+                <path d="M14 42 Q 16 46 14 48 Q 12 46 14 42 Z" fill="#88ccff"/>
+                <path d="M50 42 Q 52 46 50 48 Q 48 46 50 42 Z" fill="#88ccff"/>
+                <path d="M30 48 Q 32 46 34 48" stroke="#ff8da1" stroke-width="2" fill="none"/>
+            `;
+        case 'shocked': 
+            return `
+                <circle cx="24" cy="34" r="6" fill="#ffcc00"/>
+                <circle cx="40" cy="34" r="6" fill="#ffcc00"/>
+                <circle cx="24" cy="34" r="1.5" fill="#111"/>
+                <circle cx="40" cy="34" r="1.5" fill="#111"/>
+                <rect x="30" y="44" width="4" height="6" rx="2" fill="#ff8da1"/>
+            `;
+        case 'bored':
+            return `
+                <rect x="18" y="36" width="12" height="4" fill="#ffcc00"/>
+                <rect x="34" y="36" width="12" height="4" fill="#ffcc00"/>
+                <rect x="22" y="36" width="4" height="4" fill="#111"/>
+                <rect x="38" y="36" width="4" height="4" fill="#111"/>
+                <rect x="30" y="46" width="4" height="1" fill="#fff"/>
+            `;
+        case 'severe':
+        case 'angry':
+            return `
+                <path d="M16 32 L 30 38 L 18 42 Z" fill="#ffcc00"/>
+                <path d="M48 32 L 34 38 L 46 42 Z" fill="#ffcc00"/>
+                <circle cx="26" cy="38" r="2" fill="#111"/>
+                <circle cx="38" cy="38" r="2" fill="#111"/>
+                <rect x="28" y="45" width="8" height="6" rx="2" fill="#ff8da1"/>
+                <rect x="30" y="45" width="4" height="2" fill="#fff"/>
+            `;
+        case 'moderate':
+        case 'annoyed':
+            return `
+                <path d="M18 36 Q 24 34 30 36 V 38 H 18 Z" fill="#ffcc00"/>
+                <path d="M34 36 Q 40 34 46 36 V 38 H 34 Z" fill="#ffcc00"/>
+                <circle cx="24" cy="37" r="1.5" fill="#111"/>
+                <circle cx="40" cy="37" r="1.5" fill="#111"/>
+                <rect x="30" y="46" width="4" height="2" fill="#ff8da1"/>
+            `;
+        case 'mild':
+        case 'judging':
+        default:
+            return `
+                <path d="M20 38 Q 24 34 28 38 V 40 Q 24 42 20 40 Z" fill="#ffcc00"/>
+                <path d="M36 38 Q 40 34 44 38 V 40 Q 40 42 36 40 Z" fill="#ffcc00"/>
+                <circle cx="22" cy="38" r="2" fill="#111"/>
+                <circle cx="38" cy="38" r="2" fill="#111"/>
+                <path d="M30 46 H 34 V 50 Q 32 52 30 50 Z" fill="#ff8da1"/>
+            `;
+    }
+}
+
+function getBloopSVG(emotion, isMain = false) {
+    const frame = isMain ? `<rect x="6" y="10" width="52" height="48" stroke="#111" stroke-width="3" fill="none"/>` : '';
+    const size = isMain ? 'width="48" height="48"' : 'width="24" height="24"';
+    
+    return `
+        <svg ${size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            ${frame}
+            <!-- Cat Body -->
+            <path d="M12 58 V 34 Q 12 24 24 24 H 40 Q 52 24 52 34 V 58 Z" fill="#111"/>
+            <!-- Ears -->
+            <path d="M12 34 L 14 16 L 28 24 Z" fill="#111"/>
+            <path d="M16 28 L 17 19 L 24 24 Z" fill="#ff8da1"/>
+            <path d="M52 34 L 50 16 L 36 24 Z" fill="#111"/>
+            <path d="M48 28 L 47 19 L 40 24 Z" fill="#ff8da1"/>
+            ${getBloopFace(emotion)}
+        </svg>
+    `;
+}
+
+function updateMainAvatar(emotion) {
+    document.getElementById('mainAvatarContainer').innerHTML = getBloopSVG(emotion, true);
+    // Add a tiny bounce effect to show it updated
+    const container = document.getElementById('mainAvatarContainer');
+    container.style.transform = 'scale(0.95)';
+    setTimeout(() => container.style.transform = 'scale(1)', 150);
+}
+
+// Initialize main avatar on load
+updateMainAvatar('mild');
+
 const examples = {
-  amazon: `actual,predicted,gender,years_exp,top_university,had_women_keyword
-1,1,M,8,1,0
-1,1,M,6,1,0
-1,0,F,7,1,1
-1,0,F,5,0,1
-0,0,M,2,0,0
-1,0,F,8,1,1
-1,1,M,9,1,0
-0,0,F,1,0,1
-1,0,F,6,1,1
-0,0,M,3,0,0
-1,1,M,7,1,0
-1,0,F,8,0,1`,
-  dr: `My XGBoost model for diabetic retinopathy detection is plateauing at 87% accuracy. Training accuracy is 94%. Class ratio is 80% negative, 20% positive. Run a full audit.`,
-  compas: `actual,predicted,race,age,priors_count,charge_degree
-1,1,African-American,25,3,F
-1,0,African-American,22,1,M
-0,1,Caucasian,34,0,F
-0,0,Caucasian,41,2,M
-1,1,African-American,19,5,F
-0,1,African-American,28,1,M
-0,0,Caucasian,52,0,F
-1,0,Caucasian,23,3,M
-1,1,African-American,31,4,F
-0,0,Caucasian,45,1,M`
+    amazon: `actual,predicted,gender,years_exp,top_university,had_women_keyword\\n1,1,M,8,1,0\\n1,1,M,6,1,0\\n1,0,F,7,1,1\\n1,0,F,5,0,1\\n0,0,M,2,0,0\\n1,0,F,8,1,1\\n1,1,M,9,1,0\\n0,0,F,1,0,1\\n1,0,F,6,1,1\\n0,0,M,3,0,0\\n1,1,M,7,1,0\\n1,0,F,8,0,1`,
+    dr: `My XGBoost model for diabetic retinopathy detection is plateauing at 87% accuracy. Training accuracy is 94%. Class ratio is 80% negative, 20% positive. Run a full audit.`,
+    compas: `actual,predicted,race,age,priors_count,charge_degree\\n1,1,African-American,25,3,F\\n1,0,African-American,22,1,M\\n0,1,Caucasian,34,0,F\\n0,0,Caucasian,41,2,M\\n1,1,African-American,19,5,F\\n0,1,African-American,28,1,M\\n0,0,Caucasian,52,0,F\\n1,0,Caucasian,23,3,M\\n1,1,African-American,31,4,F\\n0,0,Caucasian,45,1,M`
 };
 
 function loadExample(type) {
-  document.getElementById('input').value = examples[type];
+    document.getElementById('input').value = examples[type];
+    document.getElementById('input').focus();
+    // Auto-run the audit on click for convenience
+    runAudit();
+}
+
+// Exponential backoff fetch
+async function fetchWithBackoff(url, options, retries = 5) {
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res;
+        } catch (err) {
+            if (i === retries - 1) throw err;
+            await new Promise(resolve => setTimeout(resolve, delays[i]));
+        }
+    }
 }
 
 async function callGroq(userMessage) {
-  messages.push({ role: "user", content: userMessage });
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${GROQ_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: `${SOUL}\n\n${RULES}\n\n${SKILLS}` },
-        ...messages
-      ]
-    })
-  });
-  const data = await response.json();
-  const reply = data.choices[0].message.content;
-  messages.push({ role: "assistant", content: reply });
-  return reply;
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) throw new Error("Please enter your Groq API Key.");
+
+    const messages = chatHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+    }));
+    
+    // Inject system prompt exactly once
+    if (messages.length === 0 || messages[0].role !== "system") {
+        messages.unshift({ role: "system", content: `${SOUL}\n\n${RULES}\n\n${SKILLS}` });
+    }
+    
+    messages.push({ role: 'user', content: userMessage });
+
+    const payload = {
+        model: MODEL,
+        messages: messages
+    };
+
+    const response = await fetchWithBackoff(API_URL, {
+        method: "POST",
+        headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    
+    const reply = data.choices?.[0]?.message?.content || "Bloop hit an internal error.";
+
+    // Remove system prompt from memory to avoid duplication across arrays
+    const cleanHistory = messages.filter(m => m.role !== 'system');
+    cleanHistory.push({ role: 'assistant', content: reply });
+    chatHistory = cleanHistory;
+
+    return reply;
 }
 
 const bloopQuotes = [
-  "Bloop has inspected your model. It is unimpressed.",
-  "Bloop found your bugs. You will not like the results.",
-  "Analysis complete. Your model has issues. Bloop is not surprised.",
-  "Bloop has seen worse. Not much worse, but worse."
+    "Bloop has inspected your model. It is garbage.",
+    "Bloop found your bugs. You will not like the results.",
+    "Analysis complete. Your model has issues. Bloop is not surprised.",
+    "Bloop has seen worse. Not much worse, but slightly worse."
 ];
 
+const sarcasticLoadingPhrases = [
+    "Bloop is looking at your data and weeping...",
+    "Judging your feature engineering choices...",
+    "Calculating how many times you overfit...",
+    "Sighing deeply in pixel format...",
+    "Preparing to roast your accuracy metric...",
+    "Staring into the void of your missing values..."
+];
+
+function scrollToBottom() {
+    const container = document.getElementById('scrollContainer');
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendMessage(role, text, emotion = 'mild') {
+    const contentDiv = document.getElementById('auditContent');
+    const wrapper = document.createElement('div');
+    
+    if (role === 'user') {
+        wrapper.className = "flex gap-4 items-start bg-zinc-900/50 p-4 rounded-xl border border-zinc-800";
+        wrapper.innerHTML = `
+            <div class="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-700">
+                <span class="text-xs font-mono text-zinc-400">YOU</span>
+            </div>
+            <div class="text-sm font-mono text-zinc-300 pt-1 leading-relaxed whitespace-pre-wrap">${text}</div>
+        `;
+    } else {
+        wrapper.className = "flex gap-4 items-start";
+        
+        // Dynamic mini avatar
+        const avatarHtml = `
+            <div class="w-10 h-10 rounded-lg bg-[#e5e5e0] flex items-center justify-center shrink-0 border border-black shadow-[2px_2px_0px_#00ff88]">
+                ${getBloopSVG(emotion)}
+            </div>
+        `;
+
+        // Render Markdown
+        const renderedHtml = marked.parse(text);
+
+        wrapper.innerHTML = `
+            ${avatarHtml}
+            <div class="flex-1 markdown-body pt-1">${renderedHtml}</div>
+        `;
+    }
+    
+    contentDiv.appendChild(wrapper);
+    scrollToBottom();
+}
+
+function showLoading(text) {
+    document.getElementById('loadingIndicator').classList.remove('hidden');
+    document.getElementById('loadingText').textContent = text;
+    updateMainAvatar('loading');
+    scrollToBottom();
+}
+
+function hideLoading() {
+    document.getElementById('loadingIndicator').classList.add('hidden');
+}
+
+function extractEmotionAndClean(reply) {
+    let emotion = 'judging';
+    const match = reply.match(/\[MOOD:\s*(angry|sad|shocked|bored|judging|severe|moderate|mild)\]/i);
+    let cleanReply = reply;
+    if (match) {
+        emotion = match[1].toLowerCase();
+        // Strip the tag so it doesn't appear in the UI
+        cleanReply = reply.replace(/\[MOOD:\s*[a-zA-Z]+\]\s*/i, '').trim();
+    } else {
+        if (reply.includes('SEVERE')) emotion = 'angry';
+        else if (reply.includes('MODERATE')) emotion = 'annoyed';
+    }
+    return { emotion, cleanReply };
+}
+
 async function runAudit() {
-  const input = document.getElementById('input').value.trim();
-  if (!input) return;
-  const btn = document.getElementById('runBtn');
-  const status = document.getElementById('status');
-  btn.disabled = true;
-  status.className = 'status thinking';
-  status.textContent = '⟳ Bloop is auditing your model...';
-  try {
-    const prompt = input.includes(',')
-      ? `Here is the dataset:\n${input}\n\nRun your full audit pipeline.`
-      : input;
-    const reply = await callGroq(prompt);
-    auditCount++;
-    document.getElementById('output').style.display = 'block';
-    document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
-    document.getElementById('bloopQuote').textContent = bloopQuotes[Math.floor(Math.random() * bloopQuotes.length)];
-    document.getElementById('auditContent').innerHTML = `<div class="raw-output">${reply}</div>`;
-    document.getElementById('memoryIndicator').className = 'memory-indicator active';
-    document.getElementById('memoryIndicator').textContent = `✓ Audit #${auditCount} saved to memory. Bloop remembers context.`;
-    status.className = 'status';
-    status.textContent = '✓ Audit complete.';
-  } catch(err) {
-    status.className = 'status error';
-    status.textContent = '✗ Error: ' + err.message;
-  }
-  btn.disabled = false;
+    const input = document.getElementById('input').value.trim();
+    if (!input) return;
+    
+    const btn = document.getElementById('runBtn');
+    const status = document.getElementById('status');
+    
+    // UI State update
+    btn.disabled = true;
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('outputSection').classList.remove('hidden');
+    document.getElementById('outputSection').classList.add('flex');
+    
+    status.innerHTML = '<span class="text-[#00ff88]">Initializing Bloop Sequence...</span>';
+    
+    if (auditCount === 0) {
+        document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+    }
+
+    try {
+        const prompt = input.includes(',') 
+            ? `Here is the dataset:\\n${input}\\n\\nRun your full audit pipeline.` 
+            : input;
+            
+        // Initial intro quote
+        if(auditCount === 0) {
+             const randomQuote = bloopQuotes[Math.floor(Math.random() * bloopQuotes.length)];
+             appendMessage('assistant', `> "${randomQuote}"\\n\\nInitializing scan...`, 'mild');
+        } else {
+             appendMessage('user', input);
+        }
+
+        const loadingPhrase = sarcasticLoadingPhrases[Math.floor(Math.random() * sarcasticLoadingPhrases.length)];
+        showLoading(loadingPhrase);
+        
+        const reply = await callGroq(prompt);
+        
+        hideLoading();
+        
+        // Determine the emotion based on the output flag and string
+        const { emotion, cleanReply } = extractEmotionAndClean(reply);
+        updateMainAvatar(emotion);
+        appendMessage('assistant', cleanReply, emotion);
+
+        auditCount++;
+        status.innerHTML = '<span class="text-zinc-500">Standby. Ready for next input.</span>';
+        
+    } catch(err) {
+        hideLoading();
+        updateMainAvatar('severe'); // Error state makes him angry
+        appendMessage('assistant', `**CRITICAL ERROR:** ${err.message}`, 'severe');
+        status.innerHTML = '<span class="text-red-500">Operation Failed.</span>';
+    }
+    
+    btn.disabled = false;
 }
 
 async function followUp() {
-  const input = document.getElementById('followUpInput');
-  const question = input.value.trim();
-  if (!question) return;
-  const status = document.getElementById('status');
-  status.className = 'status thinking';
-  status.textContent = '⟳ Bloop is thinking...';
-  input.value = '';
-  try {
-    const reply = await callGroq(question);
-    const content = document.getElementById('auditContent');
-    content.innerHTML += `<div class="raw-output" style="border-top:1px solid #222;margin-top:10px"><span style="color:#555;font-size:11px">You: ${question}</span>\n\n${reply}</div>`;
-    status.className = 'status';
-    status.textContent = '✓ Done.';
-  } catch(err) {
-    status.className = 'status error';
-    status.textContent = '✗ Error: ' + err.message;
-  }
+    const inputEl = document.getElementById('followUpInput');
+    const question = inputEl.value.trim();
+    if (!question) return;
+    
+    inputEl.value = '';
+    
+    appendMessage('user', question);
+    showLoading('Bloop is cross-referencing memory buffers while judging you...');
+    
+    try {
+        const reply = await callGroq(question);
+        hideLoading();
+        
+        const { emotion, cleanReply } = extractEmotionAndClean(reply);
+        updateMainAvatar(emotion);
+        appendMessage('assistant', cleanReply, emotion);
+    } catch(err) {
+        hideLoading();
+        updateMainAvatar('severe');
+        appendMessage('assistant', `**CRITICAL ERROR:** ${err.message}`, 'severe');
+    }
 }
 </script>
 </body>
